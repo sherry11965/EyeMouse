@@ -1,4 +1,5 @@
 import { startGame } from './core/game';
+import { shouldShowTutorial, showTutorial } from './ui/tutorial';
 
 const boot = document.getElementById('boot');
 if (boot) {
@@ -6,4 +7,13 @@ if (boot) {
   setTimeout(() => boot.classList.add('hidden'), 2400);
 }
 
-startGame();
+if (shouldShowTutorial()) {
+  setTimeout(() => {
+    boot?.classList.add('hidden');
+    showTutorial(() => {
+      startGame();
+    });
+  }, 1500);
+} else {
+  startGame();
+}
