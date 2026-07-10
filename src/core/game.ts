@@ -320,7 +320,7 @@ export class Game {
 
   private render() {
     const ctx = this.ctx;
-    ctx.fillStyle = '#0a0f1e';
+    ctx.fillStyle = '#87ceeb';
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     drawWorld(ctx, this.camera, this.zoom, this.time);
 
@@ -409,11 +409,11 @@ function drawBubble(ctx: CanvasRenderingContext2D, x: number, y: number, text: s
   const bw = Math.min(140, Math.max(...lines.map(l => ctx.measureText(l).width)) + padX * 2);
   const bh = lines.length * lh + padY * 2;
   const bx = x, by = y - bh - 4;
-  ctx.fillStyle = 'rgba(26,29,46,0.95)';
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
   ctx.fillRect(bx, by, bw, bh);
-  ctx.strokeStyle = 'rgba(240,192,80,0.7)';
+  ctx.strokeStyle = 'rgba(225,112,85,0.7)';
   ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
-  ctx.fillStyle = '#f0c050';
+  ctx.fillStyle = '#2d3436';
   for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], bx + padX, by + padY + lh * (i + 1) - 1);
 }
 
@@ -421,9 +421,9 @@ function drawThought(ctx: CanvasRenderingContext2D, x: number, y: number, text: 
   ctx.font = '6px Zpix, monospace';
   const display = text.slice(0, 24);
   const width = Math.min(110, ctx.measureText(display).width + 10);
-  ctx.fillStyle = 'rgba(26,29,46,0.85)';
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
   ctx.fillRect(x, y - 15, width, 12);
-  ctx.fillStyle = '#64dfdf';
+  ctx.fillStyle = '#0984e3';
   ctx.fillText(display, x + 5, y - 6);
 }
 
