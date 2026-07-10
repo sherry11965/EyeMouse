@@ -1,15 +1,32 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>AI 小镇 · AI Town</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%231f2937'/%3E%3Crect x='4' y='4' width='8' height='8' fill='%23fde68a'/%3E%3Crect x='6' y='6' width='4' height='4' fill='%231f2937'/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%231a1d2e'/%3E%3Crect x='4' y='4' width='8' height='8' fill='%23f0c050' rx='1'/%3E%3Crect x='6' y='6' width='4' height='4' fill='%231a1d2e'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" />
     <link rel="stylesheet" href="/src/ui/styles.css" />
   </head>
   <body>
     <div id="app">
       <canvas id="game" tabindex="0"></canvas>
+
+      <div id="scanlines"></div>
+
+      <div id="boot">
+        <div class="boot-inner">
+          <div class="boot-title">AI 小镇</div>
+          <div class="boot-sub">LLM 驱动的像素生活</div>
+          <div class="boot-loader">
+            <div class="loader-bar"><div class="loader-fill"></div></div>
+            <div class="loader-text">正在加载...</div>
+          </div>
+        </div>
+      </div>
+
       <div id="hud"></div>
       <div id="dialogue"></div>
       <div id="modal-root"></div>

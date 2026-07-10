@@ -354,55 +354,97 @@ class Game {
   }
 }
 
-function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, dir: Direction) {
+function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, _dir: Direction) {
   const s = TILE * 3;
-  ctx.fillStyle = '#fde68a';
-  ctx.fillRect(x + s * 0.25, y + s * 0.15, s * 0.5, s * 0.5);
-  ctx.fillStyle = '#1f2937';
-  const eyeY = y + s * 0.35;
-  ctx.fillRect(x + s * 0.4, eyeY, s * 0.06, s * 0.06);
-  ctx.fillRect(x + s * 0.55, eyeY, s * 0.06, s * 0.06);
-  ctx.strokeStyle = '#fde68a';
+  ctx.shadowColor = 'rgba(240,192,80,0.5)';
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = '#f0c050';
+  roundRect(ctx, x + s * 0.2, y + s * 0.1, s * 0.6, s * 0.65, 3);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#1a1d2e';
+  ctx.fillRect(x + s * 0.35, y + s * 0.32, s * 0.07, s * 0.07);
+  ctx.fillRect(x + s * 0.55, y + s * 0.32, s * 0.07, s * 0.07);
+  ctx.strokeStyle = 'rgba(240,192,80,0.6)';
   ctx.lineWidth = 2;
-  ctx.strokeRect(x + 1, y + 1, s - 2, s - 2);
+  roundRect(ctx, x + 1, y + 1, s - 2, s - 2, 3);
+  ctx.stroke();
 }
 
 function drawBubble(ctx: CanvasRenderingContext2D, x: number, y: number, text: string) {
-  ctx.font = '12px monospace';
-  const lines = wrap(text, ctx, 200);
-  const padX = 6, padY = 4, lh = 14;
+  ctx.font = '10px "Press Start 2P", monospace';
+  const lines = wrapChinese(text, ctx, 180);
+  const padX = 8, padY = 6, lh = 15;
   const w = Math.min(220, Math.max(...lines.map(l => ctx.measureText(l).width)) + padX * 2);
   const h = lines.length * lh + padY * 2;
-  ctx.fillStyle = 'rgba(17,24,39,0.95)';
-  ctx.fillRect(x, y - h, w, h);
-  ctx.strokeStyle = '#fde68a';
-  ctx.strokeRect(x + 0.5, y - h + 0.5, w - 1, h - 1);
-  ctx.fillStyle = '#fde68a';
+  const bx = x, by = y - h - 6;
+  ctx.fillStyle = 'rgba(26,29,46,0.95)';
+  ctx.shadowColor = 'rgba(0,0,0,0.4)';
+  ctx.shadowBlur = 6;
+  roundRect(ctx, bx, by, w, h, 4);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = 'rgba(240,192,80,0.5)';
+  ctx.lineWidth = 1;
+  roundRect(ctx, bx, by, w, h, 4);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x + 12, by + h);
+  ctx.lineTo(x + 8, by + h + 5);
+  ctx.lineTo(x + 18, by + h);
+  ctx.fillStyle = 'rgba(26,29,46,0.95)';
+  ctx.fill();
+  ctx.fillStyle = '#f0c050';
   for (let i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i], x + padX, y - h + padY + lh * (i + 1) - 3);
+    ctx.fillText(lines[i], bx + padX, by + padY + lh * (i + 1) - 2);
   }
 }
 
 function drawThought(ctx: CanvasRenderingContext2D, x: number, y: number, text: string) {
-  ctx.font = 'italic 11px monospace';
-  ctx.fillStyle = 'rgba(0,0,0,0.7)';
-  const w = Math.min(180, ctx.measureText(text).width + 12);
+  ctx.font = '9px "Press Start 2P", monospace';
+  const display = text.slice(0, 30);
+  const tw = Math.min(170, ctx.measureText(display).width + 14);
   const h = 18;
-  ctx.fillRect(x, y - h, w, h);
-  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-  ctx.strokeRect(x + 0.5, y - h + 0.5, w - 1, h - 1);
-  ctx.fillStyle = '#e5e7eb';
-  ctx.fillText(text.slice(0, 36), x + 6, y - 5);
+  const bx = x, by = y - h - 4;
+  ctx.fillStyle = 'rgba(26,29,46,0.85)';
+  ctx.shadowColor = 'rgba(0,0,0,0.3)';
+  ctx.shadowBlur = 4;
+  roundRect(ctx, bx, by, tw, h, 8);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = 'rgba(100,223,223,0.3)';
+  ctx.lineWidth = 1;
+  roundRect(ctx, bx, by, tw, h, 8);
+  ctx.stroke();
+  ctx.fillStyle = '#64dfdf';
+  ctx.fillText(display, bx + 7, by + 13);
 }
 
-function wrap(text: string, ctx: CanvasRenderingContext2D, max: number): string[] {
-  const words = text.split(/\s+/);
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function wrapChinese(text: string, ctx: CanvasRenderingContext2D, max: number): string[] {
   const lines: string[] = [];
   let cur = '';
-  for (const w of words) {
-    const test = cur ? cur + ' ' + w : w;
-    if (ctx.measureText(test).width > max) { lines.push(cur); cur = w; }
-    else cur = test;
+  for (const ch of text) {
+    const test = cur + ch;
+    if (ctx.measureText(test).width > max && cur.length > 0) {
+      lines.push(cur);
+      cur = ch;
+    } else {
+      cur = test;
+    }
   }
   if (cur) lines.push(cur);
   return lines;
