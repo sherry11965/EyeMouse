@@ -205,7 +205,7 @@ function drawTimeOverlay(ctx: CanvasRenderingContext2D, t: WorldTime) {
   const pw = bounds.w * TILE, ph = bounds.h * TILE;
   const alpha = nightAlpha(t);
   if (alpha > 0) {
-    ctx.fillStyle = `rgba(10,15,40,${alpha})`;
+    ctx.fillStyle = `rgba(25,25,80,${alpha})`;
     ctx.fillRect(0, 0, pw, ph);
   }
   if (t.weather === 'rain' || t.weather === 'storm') {
@@ -227,8 +227,8 @@ function drawTimeOverlay(ctx: CanvasRenderingContext2D, t: WorldTime) {
 
 function nightAlpha(t: WorldTime): number {
   const m = t.minutes;
-  if (m < 6 * 60 || m > 19.5 * 60) return 0.5;
-  if (m < 7 * 60) return 0.5 * (1 - (m - 360) / 60);
-  if (m > 18.5 * 60) return 0.5 * ((m - 1110) / 60);
+  if (m < 6 * 60 || m > 19.5 * 60) return 0.1;
+  if (m < 7 * 60) return 0.1 * (1 - (m - 360) / 60);
+  if (m > 18.5 * 60) return 0.1 * ((m - 1110) / 60);
   return 0;
 }
