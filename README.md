@@ -1,34 +1,68 @@
-# AI Town · AI小镇
+# ATown
 
-A pixel-art AI life simulator where LLM-driven residents live, work, and chat in a multi-region town. Observe, interact, or guide their stories.
+ATown 是一个俯视视角的中国风格像素小镇生活模拟器。玩家以新居民身份下车进镇，用方向键在青石街道上行走，推门进入店铺，和镇民面对面聊天。
 
-像素风 AI 生活小镇：多名 LLM 驱动的居民在多区域世界中自主决策、对话、社交，玩家可以观察、互动或推进剧情。
+镇上总有一个现实项目正在酝酿，例如重办庙会、修缮危房或让老供销社重新开门。但游戏没有任务列表、地图标点、支持度和进度条。玩家只能靠走访和自由对话了解每个人的立场：封街可能影响面馆进货，锣鼓可能打扰老人，修房可能堵住消防通道，新店也可能伤害旧店生意。事情能否办成，取决于玩家是否听懂这些具体难处，并提出让当事人愿意亲自参加协商的办法。
 
-## Features
-- LLM-driven resident decisions (intent → action → dialogue)
-- Multi-region pixel world (plaza, residential, shops, farm, forest, seaside)
-- Long/short-term memory + relationship graph
-- Event system + main/side quests
-- Player avatar with dialogue, building mode, save/load
+## 当前实现
 
-## Stack
-- Vite + TypeScript (vanilla)
-- HTML Canvas 2D
-- OpenAI-compatible LLM API (user-supplied key, localStorage)
+- 随机镇名、天气、地图细节与三类镇上项目
+- 24×16 俯视像素室外地图和五个独立室内场景
+- 方向键或 WASD 逐格移动、碰撞、点击寻路
+- 走到门口自动进入居委会、面馆、木作铺、供销社和居民小院
+- 靠近 NPC 后按 `E` 或点击人物开始自由对话
+- 五位镇民拥有不同公开态度、私下顾虑和可协商条件
+- 后端隐藏所有项目数值，只通过对话、人物行为和镇上变化呈现结果
+- 没有任务列表、显式目标、进度条或预设对话选项
+- 桌面键盘、鼠标和移动端方向按钮支持
 
-## Run
+## 本地运行
+
+需要 Node.js 18+、npm 和 Go 1.21+。
+
+后端：
 
 ```bash
+cd backend
+go mod download
+go run ./cmd
+```
+
+前端：
+
+```bash
+cd frontend
 npm install
 npm run dev
 ```
 
-Open the URL shown, then press **Esc** to enter your API key & endpoint (OpenAI-compatible). Save → the town starts.
+Windows PowerShell 如果阻止执行 `npm.ps1`，可改用 `npm.cmd install` 和 `npm.cmd run dev`。
 
-## Controls
-- WASD / Arrows — Move
-- Space / E — Interact / Talk
-- I — Inventory
-- Q — Quest log
-- M — Travel to a region
-- Esc — Pause / Settings
+访问 `http://localhost:5173`。
+
+## 如何游玩
+
+1. 用方向键、WASD 或点击地图在镇上行走。
+2. 走到建筑门口会直接进入，室内下方的门可以回到街上。
+3. 靠近镇民，按 `E` 或点击人物搭话。
+4. 不要直接问“你支持吗”。先问对方为什么犹豫、最担心什么。
+5. 找其他人核实情况，再把具体解决办法带回来。
+6. 当各方愿意坐下来自己表达条件，镇上的环境会自然出现变化。
+
+每局项目不同，没有固定的演示台词。有效的交谈通常包含“你担心什么”“会不会影响送货”“能否保留旧柜台”“九点前收声”“先问住户意见”等具体问题和方案。
+
+## 架构原则
+
+前端使用 React、Vite 和原生 WebSocket。地图由后端生成的瓦片数据渲染，前端只发送逐格移动、点击目标和对话请求。
+
+后端使用 Go 与 gorilla/websocket，每个连接拥有独立的内存小镇。移动碰撞、建筑切换和隐式项目状态全部由后端裁决。NPC 的核心信息分为可见状态和隐藏顾虑，隐藏项目及支持状态不会序列化给前端。
+
+当前对话层包含无 API Key 可运行的本地协商引擎。接入 LLM 时，应保留相同原则：只向模型提供当前 NPC 的立场、顾虑、记忆和相关镇情，不得向前端暴露全局解法或任务进度。
+
+## Docker
+
+```bash
+docker compose up
+```
+
+随后访问 `http://localhost:5173`。
