@@ -114,6 +114,20 @@ export function generateRegion(
   const objects = generateObjects(biome, seed, size, buildings);
   const interactables = generateInteractables(biome, seed, buildings, objects);
 
+  for (const building of buildings) {
+    for (const tilePos of building.tiles) {
+      if (tilePos.y >= 0 && tilePos.y < size.h && tilePos.x >= 0 && tilePos.x < size.w) {
+        tiles[tilePos.y][tilePos.x].buildingId = building.id;
+      }
+    }
+  }
+
+  for (const obj of objects) {
+    if (obj.pos.y >= 0 && obj.pos.y < size.h && obj.pos.x >= 0 && obj.pos.x < size.w) {
+      tiles[obj.pos.y][obj.pos.x].objectId = obj.id;
+    }
+  }
+
   return {
     id,
     name,
@@ -132,7 +146,7 @@ export function getSpawnPoint(region: Region): Vec2 {
   const centerX = Math.floor(region.size.w / 2);
   const centerY = Math.floor(region.size.h / 2);
 
-  for (let radius = 0; radius < 10; radius++) {
+  for (let radius = 0; radius < 15; radius++) {
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
         const x = centerX + dx;
@@ -143,6 +157,15 @@ export function getSpawnPoint(region: Region): Vec2 {
             return { x, y };
           }
         }
+      }
+    }
+  }
+
+  for (let y = 0; y < region.size.h; y++) {
+    for (let x = 0; x < region.size.w; x++) {
+      const tile = region.tiles[y][x];
+      if (tile.walkable && !tile.buildingId && !tile.objectId) {
+        return { x, y };
       }
     }
   }
