@@ -226,11 +226,10 @@ registerHandler('storage', (_interactable, _context) => {
 
 registerHandler('landmark', (interactable, _context) => {
   const descriptions = [
-    '这里似乎隐藏着什么秘密...',
-    '你能感受到一股微弱的能量波动。',
-    '这个地方有着悠久的历史。',
-    '周围的空气似乎变得不同了。',
-    '这里曾经发生过什么重要的事。',
+    '这里是镇上居民常来的地方。',
+    '环境整洁，设施维护得很好。',
+    '经常能看到附近居民在这里活动。',
+    '这个地方对镇民来说很有意义。',
   ];
   const desc = descriptions[Math.floor(Math.random() * descriptions.length)];
   return {
@@ -244,7 +243,7 @@ registerHandler('landmark', (interactable, _context) => {
 registerHandler('home', (interactable, _context) => {
   return {
     success: true,
-    message: `这是${interactable.label}，门紧闭着。也许改天可以来拜访。`,
+    message: `${interactable.label}，看起来是个温馨的家。`,
     type: 'info',
     data: { homeId: interactable.id }
   };
@@ -253,7 +252,7 @@ registerHandler('home', (interactable, _context) => {
 registerHandler('gather', (interactable, _context) => {
   return {
     success: true,
-    message: `${interactable.label}是个热闹的地方，人们喜欢在这里聚会交流。`,
+    message: `${interactable.label}是镇民们聚会交流的地方，气氛很热闹。`,
     type: 'info',
     data: { gatherId: interactable.id }
   };
@@ -262,7 +261,7 @@ registerHandler('gather', (interactable, _context) => {
 registerHandler('field', (interactable, _context) => {
   return {
     success: true,
-    message: `这片${interactable.label}长势不错，丰收在望。`,
+    message: `${interactable.label}维护得很好，看得出有人在用心打理。`,
     type: 'info',
     data: { fieldId: interactable.id }
   };
@@ -271,7 +270,7 @@ registerHandler('field', (interactable, _context) => {
 registerHandler('dock', (interactable, _context) => {
   return {
     success: true,
-    message: `${interactable.label}停靠着几艘小船，海风带来咸咸的味道。`,
+    message: `${interactable.label}停靠着几艘船，海风带来咸咸的味道。`,
     type: 'info',
     data: { dockId: interactable.id }
   };
@@ -280,16 +279,29 @@ registerHandler('dock', (interactable, _context) => {
 registerHandler('stall', (interactable, _context) => {
   return {
     success: true,
-    message: `${interactable.label}上摆满了各种商品，摊主热情地招呼着你。`,
+    message: `${interactable.label}上摆满了商品，摊主热情地招呼着你。`,
     type: 'info',
     data: { stallId: interactable.id }
   };
 });
 
 registerHandler('building', (interactable, _context) => {
+  const responses: Record<string, string> = {
+    '警察局': '警察局里很忙碌，王大明警官正在值班。',
+    '镇医院': '医院里很干净，李医生正在接诊病人。',
+    '山脚小学': '学校里传来孩子们朗朗的读书声，陈老师正在上课。',
+    '超市': '超市里商品琳琅满目，张老板正在整理货架。',
+    '邮局': '邮局里很安静，刘大海正在分拣邮件。',
+    '消防站': '消防站里设备整齐，消防员们正在训练。',
+    '图书馆': '图书馆里很安静，几个居民正在看书。',
+    '银行': '银行里秩序井然，柜员正在办理业务。',
+    '药店': '药店里药品种类齐全，药剂师正在配药。',
+    '养老院': '养老院里老人们正在活动，护工们悉心照料。',
+  };
+  const response = responses[interactable.label] || `${interactable.label}正常开放中。`;
   return {
     success: true,
-    message: `你来到了${interactable.label}。建筑看起来有些年头了。`,
+    message: response,
     type: 'info',
     data: { buildingId: interactable.id }
   };
@@ -297,18 +309,21 @@ registerHandler('building', (interactable, _context) => {
 
 registerHandler('board', (interactable, _context) => {
   const notices = [
-    '招募冒险者探索未知区域',
-    '丢失了一只橘猫，请联系猎人小屋',
-    '今晚在广场举办篝火晚会',
-    '收购各种矿石，价格公道',
-    '警告：近期森林深处出现异常，请勿深入',
-    '新到货物，欢迎光临',
-    '寻找失踪的旅人，提供线索者有赏',
+    '镇政府通知：本周六下午召开居民代表大会，欢迎大家参加。',
+    '超市周末大促销，全场八折优惠！',
+    '警察局提醒：近期注意防盗，出门锁好门窗。',
+    '学校通知：下周一举行家长会，请准时参加。',
+    '图书馆新到一批图书，欢迎借阅。',
+    '社区活动：本周日组织义务清扫，欢迎大家报名。',
+    '医院通知：免费体检活动即将开始，详情请咨询前台。',
+    '消防站开放日：本周六欢迎参观，学习消防知识。',
+    '邮局通知：春节将至，请提前寄送包裹。',
+    '招聘启事：超市招聘收银员一名，有意者请联系张老板。',
   ];
   const notice = notices[Math.floor(Math.random() * notices.length)];
   return {
     success: true,
-    message: `${interactable.label}上贴着一张告示：「${notice}」`,
+    message: `公告栏上贴着通知：「${notice}」`,
     type: 'info',
     data: { boardId: interactable.id, notice }
   };
