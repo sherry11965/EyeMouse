@@ -322,7 +322,11 @@ export class Game {
     const ctx = this.ctx;
     ctx.fillStyle = '#87ceeb';
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    drawWorld(ctx, this.camera, this.zoom, this.time);
+
+    const worldMap = this.world.worldMap;
+    if (worldMap) {
+      drawWorld(ctx, worldMap, this.camera, this.zoom, this.time);
+    }
 
     ctx.save();
     ctx.scale(this.zoom, this.zoom);

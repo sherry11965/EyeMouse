@@ -3,15 +3,6 @@ const H = 16;
 
 type Color = string | null;
 
-function hex(r: number, g: number, b: number): string {
-  return `rgb(${r},${g},${b})`;
-}
-
-interface SpriteDef {
-  pixels: Color[][];
-  animFrames?: Color[][][];
-}
-
 const T = null;
 
 export function createSpriteAtlas(): HTMLCanvasElement {
@@ -84,7 +75,6 @@ function makeCharFrame(
   const legR = !legL;
 
   if (dir === 0) {
-    // down
     setRow(px, 2 + bob, 6, 4, c.hair);
     setRow(px, 3 + bob, 6, 4, c.hair);
     setRow(px, 4 + bob, 6, 4, c.skin);
@@ -98,7 +88,6 @@ function makeCharFrame(
     px[11 + bob][6] = c.shoes; px[11 + bob][7] = c.shoes;
     px[11 + bob][8] = c.shoes; px[11 + bob][9] = c.shoes;
   } else if (dir === 1) {
-    // left
     setRow(px, 2 + bob, 6, 4, c.hair);
     setRow(px, 3 + bob, 6, 4, c.hair);
     setRow(px, 4 + bob, 6, 4, c.skin);
@@ -112,7 +101,6 @@ function makeCharFrame(
     px[11 + bob][6] = c.shoes; px[11 + bob][7] = c.shoes;
     px[11 + bob][8] = c.shoes; px[11 + bob][9] = c.shoes;
   } else if (dir === 2) {
-    // right
     setRow(px, 2 + bob, 6, 4, c.hair);
     setRow(px, 3 + bob, 6, 4, c.hair);
     setRow(px, 4 + bob, 6, 4, c.skin);
@@ -126,7 +114,6 @@ function makeCharFrame(
     px[11 + bob][6] = c.shoes; px[11 + bob][7] = c.shoes;
     px[11 + bob][8] = c.shoes; px[11 + bob][9] = c.shoes;
   } else {
-    // up
     setRow(px, 2 + bob, 6, 4, c.hair);
     setRow(px, 3 + bob, 6, 4, c.hair);
     setRow(px, 4 + bob, 6, 4, c.hair);
@@ -153,21 +140,30 @@ function terrainTiles(): Color[][][] {
   const grass = (): Color[][] => {
     const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#7ec87e'));
     for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) px[y][x] = '#6ab86a';
-    px[3][5] = '#8ed88e'; px[7][11] = '#8ed88e'; px[12][3] = '#8ed88e';
+    for (let i = 0; i < 6; i++) {
+      const gx = (i * 7 + 3) % W, gy = (i * 11 + 5) % H;
+      px[gy][gx] = '#8ed88e';
+    }
     return px;
   };
 
   const dirt = (): Color[][] => {
     const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#d4a574'));
     for (let y = 0; y < H; y += 3) for (let x = 0; x < W; x += 3) px[y][x] = '#c49564';
-    px[2][6] = '#e4b584'; px[8][12] = '#e4b584';
+    for (let i = 0; i < 4; i++) {
+      const dx = (i * 5 + 2) % W, dy = (i * 7 + 1) % H;
+      px[dy][dx] = '#e4b584';
+    }
     return px;
   };
 
   const water = (): Color[][] => {
     const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#5dade2'));
     for (let y = 0; y < H; y += 4) for (let x = 0; x < W; x++) px[y][x] = '#7ec8e3';
-    px[1][3] = '#aed6f1'; px[5][10] = '#aed6f1'; px[9][7] = '#aed6f1';
+    for (let i = 0; i < 5; i++) {
+      const wx = (i * 7 + 1) % W, wy = (i * 3 + 2) % H;
+      px[wy][wx] = '#aed6f1';
+    }
     return px;
   };
 
@@ -181,18 +177,40 @@ function terrainTiles(): Color[][][] {
   const sand = (): Color[][] => {
     const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#f5deb3'));
     for (let y = 0; y < H; y += 3) for (let x = 0; x < W; x += 3) px[y][x] = '#e8d5a0';
-    px[5][8] = '#fff0c0';
+    for (let i = 0; i < 3; i++) {
+      const sx = (i * 5 + 3) % W, sy = (i * 4 + 7) % H;
+      px[sy][sx] = '#fff0c0';
+    }
     return px;
   };
 
   const darkGrass = (): Color[][] => {
     const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#5a9c4f'));
     for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) px[y][x] = '#4a8c3f';
-    px[4][7] = '#6aac5f'; px[10][3] = '#6aac5f';
+    for (let i = 0; i < 4; i++) {
+      const dx = (i * 6 + 4) % W, dy = (i * 5 + 3) % H;
+      px[dy][dx] = '#6aac5f';
+    }
     return px;
   };
 
-  return [grass(), dirt(), water(), stone(), sand(), darkGrass()];
+  const cobble = (): Color[][] => {
+    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#b8b0a0'));
+    for (let y = 0; y < H; y += 4) {
+      for (let x = 0; x < W; x += 4) {
+        px[y][x] = '#a8a090'; px[y][x + 1] = '#a8a090';
+        px[y + 1][x] = '#a8a090';
+      }
+    }
+    for (let y = 2; y < H; y += 4) {
+      for (let x = 2; x < W; x += 4) {
+        px[y][x] = '#c8c0b0';
+      }
+    }
+    return px;
+  };
+
+  return [grass(), dirt(), water(), stone(), sand(), darkGrass(), cobble()];
 }
 
 function buildingTiles(): Color[][][] {
@@ -246,11 +264,28 @@ function objectTiles(): Color[][][] {
     return px;
   };
 
+  const pine = (): Color[][] => {
+    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill(null));
+    for (let y = 0; y < 2; y++) for (let x = 7; x < 9; x++) px[y][x] = '#2d8a4e';
+    for (let y = 2; y < 4; y++) for (let x = 5; x < 11; x++) px[y][x] = '#3a9a5e';
+    for (let y = 4; y < 7; y++) for (let x = 4; x < 12; x++) px[y][x] = '#2d8a4e';
+    for (let y = 7; y < 14; y++) { px[y][7] = '#8b6914'; px[y][8] = '#7a5a10'; }
+    return px;
+  };
+
   const flower = (): Color[][] => {
     const px: Color[][] = Array.from({ length: H }, () => Array(W).fill(null));
     px[8][7] = '#4ecb71'; px[9][7] = '#4ecb71'; px[10][7] = '#4ecb71';
     px[6][7] = '#ff6b6b'; px[6][8] = '#ff6b6b'; px[7][7] = '#ffd93d';
     px[5][7] = '#ff6b6b';
+    return px;
+  };
+
+  const bush = (): Color[][] => {
+    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill(null));
+    for (let y = 8; y < 12; y++) for (let x = 4; x < 12; x++) px[y][x] = '#4ecb71';
+    for (let y = 9; y < 11; y++) for (let x = 5; x < 11; x++) px[y][x] = '#5edb81';
+    px[9][6] = '#ff6b6b'; px[10][9] = '#ffd93d';
     return px;
   };
 
@@ -282,7 +317,33 @@ function objectTiles(): Color[][][] {
     return px;
   };
 
-  return [tree(), flower(), fountain(), bench(), signpost()];
+  const rock = (): Color[][] => {
+    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill(null));
+    for (let y = 9; y < 13; y++) for (let x = 5; x < 11; x++) px[y][x] = '#808890';
+    for (let y = 10; y < 12; y++) for (let x = 6; x < 10; x++) px[y][x] = '#909aa0';
+    px[10][7] = '#a0a8b0';
+    return px;
+  };
+
+  const lamp = (): Color[][] => {
+    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill(null));
+    for (let y = 4; y < 14; y++) { px[y][7] = '#4a5568'; px[y][8] = '#4a5568'; }
+    for (let x = 5; x < 11; x++) px[3][x] = '#4a5568';
+    px[2][6] = '#ffd93d'; px[2][7] = '#ffe066'; px[2][8] = '#ffe066'; px[2][9] = '#ffd93d';
+    px[3][6] = '#ffd93d'; px[3][9] = '#ffd93d';
+    return px;
+  };
+
+  const crate = (): Color[][] => {
+    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill(null));
+    for (let y = 7; y < 13; y++) for (let x = 4; x < 12; x++) px[y][x] = '#c49564';
+    for (let x = 4; x < 12; x++) { px[7][x] = '#a07840'; px[12][x] = '#a07840'; }
+    for (let y = 7; y < 13; y++) { px[y][4] = '#a07840'; px[y][11] = '#a07840'; }
+    px[9][7] = '#a07840'; px[9][8] = '#a07840'; px[10][7] = '#a07840'; px[10][8] = '#a07840';
+    return px;
+  };
+
+  return [tree(), pine(), flower(), bush(), fountain(), bench(), signpost(), rock(), lamp(), crate()];
 }
 
 function uiTiles(): Color[][][] {
@@ -319,10 +380,10 @@ export function getSpriteIndex(
 ): number {
   const base = {
     character: 0,
-    terrain: 24,
-    building: 30,
-    object: 35,
-    ui: 40
+    terrain: 96,
+    building: 103,
+    object: 108,
+    ui: 118
   }[category];
   if (category === 'character' && frame !== undefined) {
     return base + index * 4 + frame;

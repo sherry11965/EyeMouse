@@ -1,19 +1,62 @@
-import type { GeneratedWorld, RegionTerrainType, WorldTime } from '../core/types';
-import { getAllRegions, getWorldBounds } from '../world/worldState';
-import { drawTerrainTile, drawBuildingTile, drawObjectTile } from './sprite';
+import type { WorldMap, Region, Tile, Building, MapObject, Interactable, WorldTime, Vec2 } from '../map/types';
+import { TERRAIN_COLORS } from '../map/types';
+import { getBuildingAt } from '../map/buildings';
+import { getObjectAt } from '../map/objects';
+import { getInteractableAt } from '../map/interactables';
 
 const TILE = 16;
 
-const T = { grass: 0, dirt: 1, water: 2, stone: 3, sand: 4, darkGrass: 5 } as const;
-const B = { wall: 0, roof: 1, door: 2, window: 3, woodFloor: 4 } as const;
-const O = { tree: 0, flower: 1, fountain: 2, bench: 3, signpost: 4 } as const;
+const BUILDING_COLORS: Record<string, { wall: string; roof: string; door: string }> = {
+  house: { wall: '#e8a090', roof: '#c080d0', door: '#8b6914' },
+  shop: { wall: '#f0c0a0', roof: '#d090e0', door: '#8b6914' },
+  tavern: { wall: '#d89080', roof: '#b070c0', door: '#6b4a25' },
+  church: { wall: '#f0e0d0', roof: '#a060b0', door: '#5a3e1b' },
+  castle: { wall: '#a0a8b0', roof: '#808890', door: '#4a3e2b' },
+  barn: { wall: '#c08060', roof: '#a06040', door: '#6b4a25' },
+  windmill: { wall: '#e0d0c0', roof: '#b09080', door: '#6b4a25' },
+  lighthouse: { wall: '#f0f0f0', roof: '#e04040', door: '#4a3e2b' },
+  tower: { wall: '#909aa0', roof: '#707a80', door: '#4a3e2b' },
+  ruins: { wall: '#808080', roof: '#606060', door: '#4a3e2b' }
+};
+
+const OBJECT_COLORS: Record<string, string> = {
+  tree: '#4ecb71',
+  rock: '#a0a8b0',
+  flower: '#ff6b6b',
+  bush: '#5a9c4f',
+  fence: '#a07840',
+  sign: '#ffd93d',
+  bench: '#907030',
+  lamp: '#ffe080',
+  chest: '#c08040',
+  well: '#74b9ff',
+  fountain: '#81ecec',
+  statue: '#c0c8d0',
+  bridge: '#a07840',
+  dock: '#8b6914',
+  boat: '#6b4a25'
+};
+
+const INTERACTABLE_COLORS: Record<string, string> = {
+  door: '#8b6914',
+  bed: '#ff9a76',
+  chest: '#c08040',
+  npc: '#ff7eb3',
+  item: '#ffd93d',
+  crafting: '#a0a8b0',
+  storage: '#909aa0',
+  portal: '#9b80f0',
+  quest: '#ff6b6b',
+  shop: '#4fc3f7'
+};
 
 export function drawWorld(
   ctx: CanvasRenderingContext2D,
-  camera: { x: number; y: number },
+  world: WorldMap,
+  camera: Vec2,
   zoom: number,
   time: WorldTime
-) {
+): void {
   const screenW = ctx.canvas.width;
   const screenH = ctx.canvas.height;
 
@@ -24,211 +67,265 @@ export function drawWorld(
     (screenH / zoom) / 2 - camera.y * TILE
   );
 
-  const bounds = getWorldBounds();
+  drawBackground(ctx, world);
 
-  // 全世界底色（道路/空隙）
-  for (let y = 0; y < bounds.h; y++) {
-    for (let x = 0; x < bounds.w; x++) {
-      drawTerrainTile(ctx, T.stone, x * TILE, y * TILE);
-    }
+  for (const region of world.regions) {
+    drawRegion(ctx, region);
   }
 
-  const regions = getAllRegions();
+  drawTimeOverlay(ctx, time, world.bounds);
 
-  // 各区域地面
-  for (const r of regions) {
-    const ox = r.worldOffset.x, oy = r.worldOffset.y;
-    const base = terrainBase(r.terrainType);
-    const alt = terrainAlt(r.terrainType);
-    for (let ty = 0; ty < r.size.h; ty++) {
-      for (let tx = 0; tx < r.size.w; tx++) {
-        drawTerrainTile(ctx, (tx + ty) % 2 === 0 ? base : alt,
-          (ox + tx) * TILE, (oy + ty) * TILE);
-      }
-    }
-  }
-
-  // 各区域装饰
-  for (const r of regions) {
-    drawRegionDecor(ctx, r.terrainType, r.worldOffset.x, r.worldOffset.y, r.size.w, r.size.h);
-    // 区域内可交互对象（路牌标记）
-    for (const obj of r.interactables) {
-      if (obj.type !== 'home' && obj.type !== 'shop' && obj.type !== 'dock') {
-        drawObjectTile(ctx, O.signpost,
-          (r.worldOffset.x + obj.x) * TILE,
-          (r.worldOffset.y + obj.y) * TILE);
-      }
-    }
-  }
-
-  drawTimeOverlay(ctx, time);
   ctx.restore();
 }
 
-function terrainBase(t: RegionTerrainType): number {
-  switch (t) {
-    case 'plaza':    return T.stone;
-    case 'market':   return T.stone;
-    case 'village':  return T.grass;
-    case 'farm':     return T.dirt;
-    case 'forest':   return T.darkGrass;
-    case 'seaside':  return T.sand;
-    case 'ruins':    return T.stone;
-    case 'mountain': return T.stone;
-    case 'desert':   return T.sand;
-    default:         return T.grass;
-  }
+function drawBackground(ctx: CanvasRenderingContext2D, world: WorldMap): void {
+  ctx.fillStyle = '#87ceeb';
+  ctx.fillRect(0, 0, world.bounds.w * TILE, world.bounds.h * TILE);
 }
 
-function terrainAlt(t: RegionTerrainType): number {
-  switch (t) {
-    case 'plaza':    return T.stone;
-    case 'market':   return T.dirt;
-    case 'village':  return T.grass;
-    case 'farm':     return T.grass;
-    case 'forest':   return T.darkGrass;
-    case 'seaside':  return T.sand;
-    case 'ruins':    return T.dirt;
-    case 'mountain': return T.dirt;
-    case 'desert':   return T.dirt;
-    default:         return T.grass;
-  }
-}
+function drawRegion(ctx: CanvasRenderingContext2D, region: Region): void {
+  const ox = region.pos.x;
+  const oy = region.pos.y;
 
-function drawRegionDecor(
-  ctx: CanvasRenderingContext2D,
-  type: RegionTerrainType,
-  ox: number, oy: number, w: number, h: number
-) {
-  const px = (lx: number, ly: number): [number, number] =>
-    [(ox + lx) * TILE, (oy + ly) * TILE];
+  for (let y = 0; y < region.size.h; y++) {
+    for (let x = 0; x < region.size.w; x++) {
+      const tile = region.tiles[y][x];
+      const worldX = ox + x;
+      const worldY = oy + y;
 
-  if (type === 'forest') {
-    const trees = [
-      [4,3],[8,6],[12,2],[16,8],[20,4],[24,10],[28,6],[32,3],[36,8],[40,4],
-      [2,14],[6,18],[10,22],[14,16],[18,24],[22,28],[26,20],[30,30],[34,24],[38,28],
-      [5,10],[13,20],[21,14],[29,18],[37,16],[9,28],[17,18],[25,24],[33,30],[41,26],
-    ];
-    for (const [tx, ty] of trees) if (tx < w && ty < h)
-      drawObjectTile(ctx, O.tree, ...px(tx, ty));
-    for (const [fx, fy] of [[3,6],[11,14],[19,22],[27,10],[35,20]])
-      if (fx < w && fy < h) drawObjectTile(ctx, O.flower, ...px(fx, fy));
-  }
+      drawTile(ctx, tile, worldX * TILE, worldY * TILE);
 
-  if (type === 'farm') {
-    for (let fx = 8; fx <= Math.min(38, w - 4); fx += 2)
-      for (let fy = 6; fy <= Math.min(16, h - 4); fy += 2)
-        drawTerrainTile(ctx, T.dirt, (ox + fx) * TILE, (oy + fy) * TILE);
-    for (let fx = 10; fx <= Math.min(36, w - 4); fx += 2)
-      for (let fy = 18; fy <= Math.min(28, h - 4); fy += 2)
-        drawTerrainTile(ctx, T.dirt, (ox + fx) * TILE, (oy + fy) * TILE);
-    for (const [fx, fy] of [[11,9],[29,9],[15,23],[31,25]])
-      if (fx < w && fy < h) drawObjectTile(ctx, O.flower, ...px(fx, fy));
-  }
-
-  if (type === 'village') {
-    for (const [hx, hy] of [[4,4],[12,4],[22,4],[32,4],[6,22],[16,22],[28,22]])
-      if (hx + 2 < w && hy + 2 < h) {
-        drawBuildingTile(ctx, B.wall, ...px(hx - 1, hy - 1));
-        drawBuildingTile(ctx, B.roof, ...px(hx - 1, hy - 3));
-        drawBuildingTile(ctx, B.door, ...px(hx, hy));
+      const building = getBuildingAt(region.buildings, x, y);
+      if (building) {
+        drawBuildingTile(ctx, building, x, y, worldX * TILE, worldY * TILE);
       }
-    for (const [tx, ty] of [[18,10],[22,10],[20,14],[24,12]])
-      if (tx < w && ty < h) drawObjectTile(ctx, O.tree, ...px(tx, ty));
-    drawObjectTile(ctx, O.bench, ...(px(20, 12)));
-  }
 
-  if (type === 'seaside') {
-    for (let sx = Math.max(0, w - 18); sx < w; sx++)
-      for (let sy = 4; sy < h; sy++)
-        drawTerrainTile(ctx, T.water, (ox + sx) * TILE, (oy + sy) * TILE);
-    for (let sx = Math.max(0, w - 22); sx < w - 18; sx++)
-      for (let sy = 8; sy < h; sy++)
-        drawTerrainTile(ctx, T.sand, (ox + sx) * TILE, (oy + sy) * TILE);
-    const lhx = w - 2, lhy = 2;
-    if (lhx < w && lhy < h) {
-      drawBuildingTile(ctx, B.wall, ...px(lhx, lhy));
-      drawBuildingTile(ctx, B.roof, ...px(lhx, lhy - 2));
+      const obj = getObjectAt(region.objects, x, y);
+      if (obj) {
+        drawObject(ctx, obj, worldX * TILE, worldY * TILE);
+      }
+
+      const interactable = getInteractableAt(region.interactables, x, y);
+      if (interactable && !building) {
+        drawInteractable(ctx, interactable, worldX * TILE, worldY * TILE);
+      }
     }
   }
 
-  if (type === 'plaza') {
-    const cx = Math.floor(w / 2), cy = Math.floor(h / 2);
-    drawObjectTile(ctx, O.fountain, ...px(cx, cy));
-    for (const [bx, by] of [[cx-10,cy-8],[cx-2,cy-8],[cx+8,cy+4],[cx-10,cy+8]])
-      if (bx >= 0 && by >= 0 && bx < w && by < h)
-        drawObjectTile(ctx, O.bench, ...px(bx, by));
-    for (const [fx, fy] of [[cx-8,cy-2],[cx+4,cy-6],[cx+8,cy+2],[cx-4,cy+6]])
-      if (fx >= 0 && fy >= 0 && fx < w && fy < h)
-        drawObjectTile(ctx, O.flower, ...px(fx, fy));
+  drawRegionBorder(ctx, region);
+  drawRegionName(ctx, region);
+}
+
+function drawTile(ctx: CanvasRenderingContext2D, tile: Tile, x: number, y: number): void {
+  const baseColor = TERRAIN_COLORS[tile.terrain];
+  ctx.fillStyle = baseColor;
+  ctx.fillRect(x, y, TILE, TILE);
+
+  const variation = (tile.elevation - 0.5) * 20;
+  if (Math.abs(variation) > 2) {
+    ctx.fillStyle = variation > 0 ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+    ctx.fillRect(x, y, TILE, TILE);
   }
 
-  if (type === 'market') {
-    for (const [sx, sy] of [[4,4],[12,4],[22,4],[32,4],[8,18],[20,20],[34,24]])
-      if (sx + 2 < w && sy + 2 < h) {
-        drawBuildingTile(ctx, B.wall, ...px(sx, sy));
-        drawBuildingTile(ctx, B.roof, ...px(sx, sy - 2));
-        drawBuildingTile(ctx, B.window, ...px(sx + 1, sy - 1));
-      }
-    for (const [fx, fy] of [[10,12],[20,14],[30,12]])
-      if (fx < w && fy < h) drawObjectTile(ctx, O.flower, ...px(fx, fy));
-  }
-
-  if (type === 'ruins') {
-    for (const [rx, ry] of [[6,8],[14,12],[24,6],[32,16],[38,8],[10,22],[28,24]])
-      if (rx < w && ry < h) drawBuildingTile(ctx, B.wall, ...px(rx, ry));
-    for (const [tx, ty] of [[4,10],[18,8],[36,20],[12,26],[30,28]])
-      if (tx < w && ty < h) drawObjectTile(ctx, O.tree, ...px(tx, ty));
-  }
-
-  if (type === 'mountain') {
-    for (let y = 0; y < Math.min(8, h); y++)
-      for (let x = 0; x < w; x++)
-        drawTerrainTile(ctx, T.stone, (ox + x) * TILE, (oy + y) * TILE);
-    for (const [tx, ty] of [[6,10],[14,12],[22,10],[30,14],[38,10]])
-      if (tx < w && ty < h) drawObjectTile(ctx, O.tree, ...px(tx, ty));
-  }
-
-  if (type === 'desert') {
-    for (const [cx2, cy2] of [[8,6],[20,14],[34,8],[12,22],[28,18],[40,24]])
-      if (cx2 < w && cy2 < h) {
-        for (let dy = -1; dy <= 1; dy++)
-          for (let dx = -1; dx <= 1; dx++)
-            if (cx2 + dx >= 0 && cy2 + dy >= 0 && cx2 + dx < w && cy2 + dy < h)
-              drawTerrainTile(ctx, T.stone, (ox + cx2 + dx) * TILE, (oy + cy2 + dy) * TILE);
-      }
+  if (tile.terrain === 'water') {
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    const waveOffset = Math.sin((x + y) * 0.1) * 2;
+    ctx.fillRect(x + 4 + waveOffset, y + 6, 8, 2);
   }
 }
 
-function drawTimeOverlay(ctx: CanvasRenderingContext2D, t: WorldTime) {
-  const bounds = getWorldBounds();
-  const pw = bounds.w * TILE, ph = bounds.h * TILE;
-  const alpha = nightAlpha(t);
+function drawBuildingTile(
+  ctx: CanvasRenderingContext2D,
+  building: Building,
+  localX: number,
+  localY: number,
+  worldX: number,
+  worldY: number
+): void {
+  const colors = BUILDING_COLORS[building.type] || BUILDING_COLORS.house;
+  const isTop = localY < 2;
+  const isBottom = localY >= building.size.h - 1;
+  const isLeft = localX === 0;
+  const isRight = localX === building.size.w - 1;
+  const isDoor = isBottom && localX === Math.floor(building.size.w / 2);
+
+  if (isDoor) {
+    ctx.fillStyle = colors.door;
+    ctx.fillRect(worldX, worldY, TILE, TILE);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(worldX + 6, worldY + 4, 4, 8);
+  } else if (isTop) {
+    ctx.fillStyle = colors.roof;
+    ctx.fillRect(worldX, worldY, TILE, TILE);
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(worldX, worldY + TILE - 4, TILE, 4);
+  } else {
+    ctx.fillStyle = colors.wall;
+    ctx.fillRect(worldX, worldY, TILE, TILE);
+
+    if (!isTop && !isBottom && !isLeft && !isRight && (localX + localY) % 3 === 0) {
+      ctx.fillStyle = '#87ceeb';
+      ctx.fillRect(worldX + 4, worldY + 4, 8, 8);
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.fillRect(worldX + 4, worldY + 4, 8, 4);
+    }
+  }
+
+  if (isLeft || isTop) {
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(worldX, worldY, TILE, TILE);
+  }
+  if (isRight || isBottom) {
+    ctx.fillStyle = 'rgba(0,0,0,0.1)';
+    ctx.fillRect(worldX, worldY, TILE, TILE);
+  }
+}
+
+function drawObject(ctx: CanvasRenderingContext2D, obj: MapObject, x: number, y: number): void {
+  const color = OBJECT_COLORS[obj.type] || '#808080';
+  ctx.fillStyle = color;
+
+  switch (obj.type) {
+    case 'tree':
+      ctx.fillStyle = '#8b6914';
+      ctx.fillRect(x + 6, y + 10, 4, 6);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x + 8, y + 6, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.beginPath();
+      ctx.arc(x + 6, y + 4, 3, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+
+    case 'rock':
+      ctx.beginPath();
+      ctx.ellipse(x + 8, y + 10, 6, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.beginPath();
+      ctx.ellipse(x + 6, y + 8, 3, 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+
+    case 'flower':
+      ctx.fillStyle = '#4ecb71';
+      ctx.fillRect(x + 7, y + 8, 2, 6);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x + 8, y + 6, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffd93d';
+      ctx.beginPath();
+      ctx.arc(x + 8, y + 6, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+
+    case 'bush':
+      ctx.beginPath();
+      ctx.arc(x + 8, y + 10, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.beginPath();
+      ctx.arc(x + 6, y + 8, 3, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+
+    default:
+      ctx.fillRect(x + 2, y + 2, 12, 12);
+  }
+}
+
+function drawInteractable(ctx: CanvasRenderingContext2D, interactable: Interactable, x: number, y: number): void {
+  const color = INTERACTABLE_COLORS[interactable.type] || '#ffffff';
+  ctx.fillStyle = color;
+  ctx.globalAlpha = 0.7;
+  ctx.fillRect(x + 4, y + 4, 8, 8);
+  ctx.globalAlpha = 1;
+
+  if (interactable.type === 'quest') {
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 10px monospace';
+    ctx.fillText('!', x + 6, y + 12);
+  }
+}
+
+function drawRegionBorder(ctx: CanvasRenderingContext2D, region: Region): void {
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(
+    region.pos.x * TILE,
+    region.pos.y * TILE,
+    region.size.w * TILE,
+    region.size.h * TILE
+  );
+}
+
+function drawRegionName(ctx: CanvasRenderingContext2D, region: Region): void {
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(
+    region.pos.x * TILE + 4,
+    region.pos.y * TILE + 4,
+    ctx.measureText(region.name).width + 12,
+    16
+  );
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '10px monospace';
+  ctx.fillText(region.name, region.pos.x * TILE + 10, region.pos.y * TILE + 16);
+}
+
+function drawTimeOverlay(ctx: CanvasRenderingContext2D, time: WorldTime, bounds: { w: number; h: number }): void {
+  const alpha = getNightAlpha(time);
   if (alpha > 0) {
     ctx.fillStyle = `rgba(25,25,80,${alpha})`;
-    ctx.fillRect(0, 0, pw, ph);
+    ctx.fillRect(0, 0, bounds.w * TILE, bounds.h * TILE);
   }
-  if (t.weather === 'rain' || t.weather === 'storm') {
-    ctx.fillStyle = 'rgba(125,211,252,0.5)';
-    const seed = Math.floor(t.minutes * 13);
-    for (let i = 0; i < 80; i++)
-      ctx.fillRect(((i * 53 + seed) % pw), ((i * 97 + seed * 3) % ph), 1, 3);
+
+  if (time.weather === 'rain' || time.weather === 'storm') {
+    ctx.fillStyle = 'rgba(125,211,252,0.3)';
+    const seed = Math.floor(time.minutes * 13);
+    for (let i = 0; i < 80; i++) {
+      const rx = ((i * 53 + seed) % (bounds.w * TILE));
+      const ry = ((i * 97 + seed * 3) % (bounds.h * TILE));
+      ctx.fillRect(rx, ry, 1, 4);
+    }
   }
-  if (t.weather === 'fog') {
-    ctx.fillStyle = 'rgba(226,232,240,0.18)'; ctx.fillRect(0, 0, pw, ph);
+
+  if (time.weather === 'fog') {
+    ctx.fillStyle = 'rgba(226,232,240,0.15)';
+    ctx.fillRect(0, 0, bounds.w * TILE, bounds.h * TILE);
   }
-  if (t.weather === 'snow') {
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    const seed = Math.floor(t.minutes * 7);
-    for (let i = 0; i < 60; i++)
-      ctx.fillRect(((i * 71 + seed) % pw), ((i * 113 + seed * 2) % ph), 2, 2);
+
+  if (time.weather === 'snow') {
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    const seed = Math.floor(time.minutes * 7);
+    for (let i = 0; i < 60; i++) {
+      const sx = ((i * 71 + seed) % (bounds.w * TILE));
+      const sy = ((i * 113 + seed * 2) % (bounds.h * TILE));
+      ctx.fillRect(sx, sy, 2, 2);
+    }
   }
 }
 
-function nightAlpha(t: WorldTime): number {
-  const m = t.minutes;
-  if (m < 6 * 60 || m > 19.5 * 60) return 0.1;
-  if (m < 7 * 60) return 0.1 * (1 - (m - 360) / 60);
-  if (m > 18.5 * 60) return 0.1 * ((m - 1110) / 60);
+function getNightAlpha(time: WorldTime): number {
+  const m = time.minutes;
+  if (m < 6 * 60 || m > 19.5 * 60) return 0.15;
+  if (m < 7 * 60) return 0.15 * (1 - (m - 360) / 60);
+  if (m > 18.5 * 60) return 0.15 * ((m - 1110) / 60);
   return 0;
+}
+
+export function worldToScreen(worldPos: Vec2, camera: Vec2, zoom: number, canvas: { width: number; height: number }): Vec2 {
+  return {
+    x: (worldPos.x - camera.x) * TILE * zoom + canvas.width / 2,
+    y: (worldPos.y - camera.y) * TILE * zoom + canvas.height / 2
+  };
+}
+
+export function screenToWorld(screenPos: Vec2, camera: Vec2, zoom: number, canvas: { width: number; height: number }): Vec2 {
+  return {
+    x: (screenPos.x - canvas.width / 2) / (TILE * zoom) + camera.x,
+    y: (screenPos.y - canvas.height / 2) / (TILE * zoom) + camera.y
+  };
 }

@@ -1,6 +1,6 @@
 export type Vec2 = { x: number; y: number };
 export type Direction = 'up' | 'down' | 'left' | 'right';
-export type RegionId = string;  // 改为 string 支持动态生成
+export type RegionId = string;
 
 export type Intent = 'GO_TO' | 'TALK' | 'WORK' | 'REST' | 'INTERACT_OBJECT' | 'IDLE';
 
@@ -66,8 +66,6 @@ export interface WorldTime {
   weather: 'sunny' | 'cloudy' | 'rain' | 'storm' | 'snow' | 'fog';
 }
 
-// ── AI 生成的世界数据 ──────────────────────────────────────────────
-
 export type RegionTerrainType =
   | 'village' | 'forest' | 'market' | 'seaside'
   | 'farm' | 'plaza' | 'ruins' | 'mountain' | 'desert';
@@ -99,4 +97,5 @@ export interface GeneratedWorld {
   personas: ResidentPersona[];
   events: string[];
   seed: number;
+  worldMap?: import('../map/types').WorldMap;
 }
