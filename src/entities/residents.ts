@@ -1,5 +1,6 @@
 import type { ResidentPersona, ResidentState, RegionId } from '../core/types';
 import { getRegion, getAllRegions } from '../world/worldState';
+import { getSpawnPoint } from '../map/regions';
 
 export function createInitialStates(personas: ResidentPersona[]): Map<string, ResidentState> {
   const out = new Map<string, ResidentState>();
@@ -11,12 +12,19 @@ export function createInitialStates(personas: ResidentPersona[]): Map<string, Re
     const region = r ?? fallback;
     const index = homeCounts.get(region?.id ?? p.home) ?? 0;
     homeCounts.set(region?.id ?? p.home, index + 1);
+    
+    let spawnPos = { x: 22, y: 17 };
+    if (region) {
+      const spawn = getSpawnPoint(region);
+      spawnPos = {
+        x: region.pos.x + clamp(spawn.x + (index % 3) * 2 - 2, 1, region.size.w - 2),
+        y: region.pos.y + clamp(spawn.y + Math.floor(index / 3) * 2, 1, region.size.h - 2)
+      };
+    }
+    
     out.set(p.id, {
       id: p.id,
-      pos: region ? {
-        x: region.worldOffset.x + clamp(region.spawn.x + (index % 3) * 2 - 2, 1, region.size.w - 2),
-        y: region.worldOffset.y + clamp(region.spawn.y + Math.floor(index / 3) * 2, 1, region.size.h - 2)
-      } : { x: 22, y: 17 },
+      pos: spawnPos,
       region: region?.id ?? (p.home as RegionId),
       energy: 100,
       mood: 70,

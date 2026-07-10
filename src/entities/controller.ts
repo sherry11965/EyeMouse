@@ -1,4 +1,5 @@
 import type { Decision, Direction, ResidentPersona, ResidentState, Vec2 } from '../core/types';
+import type { Region, Interactable } from '../map/types';
 import { aStar } from '../world/pathfind';
 import { getRegion } from '../world/worldState';
 import { clamp, dist2 } from '../core/util';
@@ -15,10 +16,10 @@ export function applyDecision(
 ) {
   const region = getRegion(self.region);
   if (!region) return null;
-  const offset = region.worldOffset;
+  const offset = region.pos;
 
   const blocked = (x: number, y: number) =>
-    region.interactables.some(i => Math.abs(i.x - x) + Math.abs(i.y - y) === 0);
+    region.interactables.some(i => Math.abs(i.pos.x - x) + Math.abs(i.pos.y - y) === 0);
 
   const relTarget = resolveTarget(decision, agentsInRegion, region, offset);
   if (relTarget) {
@@ -46,13 +47,13 @@ export function applyDecision(
 function resolveTarget(
   d: Decision,
   others: Array<{ id: string; pos: Vec2 }>,
-  region: { interactables: Array<{ id: string; x: number; y: number; type: string }> },
+  region: Region,
   offset: Vec2
 ): Vec2 | null {
   if (d.intent === 'IDLE' || d.intent === 'REST') return null;
   if (d.intent === 'WORK') {
     const wp = region.interactables.find(i => ['shop','field','dock','stall'].includes(i.type));
-    return wp ? { x: wp.x, y: wp.y } : null;
+    return wp ? { x: wp.pos.x, y: wp.pos.y } : null;
   }
   if (d.target?.type === 'agent') {
     const other = others.find(o => o.id === d.target!.id);
@@ -60,7 +61,7 @@ function resolveTarget(
   }
   if (d.target?.type === 'object' && d.target.id) {
     const obj = region.interactables.find(i => i.id === d.target!.id);
-    if (obj) return { x: obj.x, y: obj.y };
+    if (obj) return { x: obj.pos.x, y: obj.pos.y };
   }
   if (d.target?.type === 'tile' && d.target.id) {
     const [x, y] = d.target.id.split(',').map(Number);
