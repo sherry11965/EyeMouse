@@ -290,33 +290,48 @@ class Game {
     ctx.fillStyle = '#0a0f1e';
     ctx.fillRect(0, 0, w, h);
     const region = REGIONS[this.player.region];
-    drawWorld(ctx, this.player.region, this.camera, this.zoom, this.time, region.size.w, region.size.h);
+    const screenW = w;
+    const screenH = h;
+    const z = this.zoom;
+    const cam = this.camera;
+
+    drawWorld(ctx, this.player.region, cam, z, this.time, region.size.w, region.size.h);
+
+    ctx.save();
+    ctx.scale(z, z);
+    ctx.translate(screenW / z / 2 - cam.x * TILE, screenH / z / 2 - cam.y * TILE);
 
     const others = [...this.agents.values()].filter(a => a.state.region === this.player.region);
     const allSprites: Array<{ y: number; draw: () => void }> = [];
     for (const a of others) {
-      const sx = w / 2 + (a.state.pos.x - this.camera.x) * TILE * this.zoom;
-      const sy = h / 2 + (a.state.pos.y - this.camera.y) * TILE * this.zoom;
       const persona = getResident(a.state.id);
       if (!persona) continue;
+      const sx = a.state.pos.x * TILE;
+      const sy = a.state.pos.y * TILE;
       allSprites.push({
         y: a.state.pos.y,
         draw: () => {
           drawResident(ctx, persona, sx, sy, a.controller.dir, a.walkPhase);
           if (a.speechUntil > performance.now() && a.speech) {
-            drawBubble(ctx, sx + 8, sy - 18, a.speech);
+            drawBubble(ctx, sx + TILE, sy - 14, a.speech);
           } else if (a.thought) {
-            drawThought(ctx, sx + 8, sy - 18, a.thought);
+            drawThought(ctx, sx + TILE, sy - 14, a.thought);
           }
         }
       });
     }
-    const psx = w / 2 + (this.player.pos.x - this.camera.x) * TILE * this.zoom - TILE * this.zoom / 2;
-    const psy = h / 2 + (this.player.pos.y - this.camera.y) * TILE * this.zoom - TILE * this.zoom / 2;
-    allSprites.push({ y: this.player.pos.y - 0.05, draw: () => drawPlayer(ctx, psx, psy, this.player.facing) });
+    allSprites.push({
+      y: this.player.pos.y - 0.05,
+      draw: () => {
+        const px = this.player.pos.x * TILE;
+        const py = this.player.pos.y * TILE;
+        drawPlayer(ctx, px, py, this.player.facing);
+      }
+    });
 
     allSprites.sort((a, b) => a.y - b.y);
     for (const s of allSprites) s.draw();
+    ctx.restore();
 
     const hud = document.getElementById('hud')!;
     const usage = loadUsage();
@@ -355,69 +370,68 @@ class Game {
 }
 
 function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, _dir: Direction) {
-  const s = TILE * 3;
-  ctx.shadowColor = 'rgba(240,192,80,0.5)';
-  ctx.shadowBlur = 10;
+  ctx.shadowColor = 'rgba(240,192,80,0.6)';
+  ctx.shadowBlur = 6;
   ctx.fillStyle = '#f0c050';
-  roundRect(ctx, x + s * 0.2, y + s * 0.1, s * 0.6, s * 0.65, 3);
+  roundRect(ctx, x + 2, y + 1, 12, 13, 2);
   ctx.fill();
   ctx.shadowBlur = 0;
   ctx.fillStyle = '#1a1d2e';
-  ctx.fillRect(x + s * 0.35, y + s * 0.32, s * 0.07, s * 0.07);
-  ctx.fillRect(x + s * 0.55, y + s * 0.32, s * 0.07, s * 0.07);
-  ctx.strokeStyle = 'rgba(240,192,80,0.6)';
-  ctx.lineWidth = 2;
-  roundRect(ctx, x + 1, y + 1, s - 2, s - 2, 3);
+  ctx.fillRect(x + 5, y + 5, 2, 2);
+  ctx.fillRect(x + 9, y + 5, 2, 2);
+  ctx.strokeStyle = 'rgba(240,192,80,0.5)';
+  ctx.lineWidth = 1;
+  roundRect(ctx, x + 1, y + 1, 14, 14, 2);
   ctx.stroke();
 }
 
 function drawBubble(ctx: CanvasRenderingContext2D, x: number, y: number, text: string) {
-  ctx.font = '10px "Press Start 2P", monospace';
-  const lines = wrapChinese(text, ctx, 180);
-  const padX = 8, padY = 6, lh = 15;
-  const w = Math.min(220, Math.max(...lines.map(l => ctx.measureText(l).width)) + padX * 2);
-  const h = lines.length * lh + padY * 2;
-  const bx = x, by = y - h - 6;
+  ctx.font = '7px monospace';
+  const lines = wrapChinese(text, ctx, 120);
+  const padX = 5, padY = 4, lh = 10;
+  const bw = Math.min(140, Math.max(...lines.map(l => ctx.measureText(l).width)) + padX * 2);
+  const bh = lines.length * lh + padY * 2;
+  const bx = x, by = y - bh - 4;
   ctx.fillStyle = 'rgba(26,29,46,0.95)';
   ctx.shadowColor = 'rgba(0,0,0,0.4)';
-  ctx.shadowBlur = 6;
-  roundRect(ctx, bx, by, w, h, 4);
+  ctx.shadowBlur = 3;
+  roundRect(ctx, bx, by, bw, bh, 3);
   ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = 'rgba(240,192,80,0.5)';
-  ctx.lineWidth = 1;
-  roundRect(ctx, bx, by, w, h, 4);
+  ctx.strokeStyle = 'rgba(240,192,80,0.4)';
+  ctx.lineWidth = 0.5;
+  roundRect(ctx, bx, by, bw, bh, 3);
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(x + 12, by + h);
-  ctx.lineTo(x + 8, by + h + 5);
-  ctx.lineTo(x + 18, by + h);
+  ctx.moveTo(x + 8, by + bh);
+  ctx.lineTo(x + 5, by + bh + 4);
+  ctx.lineTo(x + 13, by + bh);
   ctx.fillStyle = 'rgba(26,29,46,0.95)';
   ctx.fill();
   ctx.fillStyle = '#f0c050';
   for (let i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i], bx + padX, by + padY + lh * (i + 1) - 2);
+    ctx.fillText(lines[i], bx + padX, by + padY + lh * (i + 1) - 1);
   }
 }
 
 function drawThought(ctx: CanvasRenderingContext2D, x: number, y: number, text: string) {
-  ctx.font = '9px "Press Start 2P", monospace';
-  const display = text.slice(0, 30);
-  const tw = Math.min(170, ctx.measureText(display).width + 14);
-  const h = 18;
-  const bx = x, by = y - h - 4;
+  ctx.font = '6px monospace';
+  const display = text.slice(0, 24);
+  const tw = Math.min(110, ctx.measureText(display).width + 10);
+  const th = 12;
+  const bx = x, by = y - th - 3;
   ctx.fillStyle = 'rgba(26,29,46,0.85)';
   ctx.shadowColor = 'rgba(0,0,0,0.3)';
-  ctx.shadowBlur = 4;
-  roundRect(ctx, bx, by, tw, h, 8);
+  ctx.shadowBlur = 2;
+  roundRect(ctx, bx, by, tw, th, 6);
   ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = 'rgba(100,223,223,0.3)';
-  ctx.lineWidth = 1;
-  roundRect(ctx, bx, by, tw, h, 8);
+  ctx.strokeStyle = 'rgba(100,223,223,0.25)';
+  ctx.lineWidth = 0.5;
+  roundRect(ctx, bx, by, tw, th, 6);
   ctx.stroke();
   ctx.fillStyle = '#64dfdf';
-  ctx.fillText(display, bx + 7, by + 13);
+  ctx.fillText(display, bx + 5, by + 9);
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
