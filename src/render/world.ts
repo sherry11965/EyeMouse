@@ -65,6 +65,58 @@ export function drawWorld(
   drawTimeOverlay(ctx, time, world.bounds);
 }
 
+export function drawActiveRegionView(
+  ctx: CanvasRenderingContext2D,
+  region: Region,
+  time: WorldTime,
+  viewportW: number,
+  viewportH: number
+): void {
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, viewportW, viewportH);
+
+  const ox = region.pos.x;
+  const oy = region.pos.y;
+
+  for (let y = 0; y < region.size.h; y++) {
+    for (let x = 0; x < region.size.w; x++) {
+      const tile = region.tiles[y][x];
+      const px = (x - ox) * TILE;
+      const py = (y - oy) * TILE;
+
+      drawTile(ctx, tile, px, py);
+
+      const building = getBuildingAt(region.buildings, x, y);
+      if (building) {
+        drawBuildingTile(ctx, building, x, y, px, py);
+      }
+
+      const obj = getObjectAt(region.objects, x, y);
+      if (obj) {
+        drawObject(ctx, obj, px, py);
+      }
+
+      const interactable = getInteractableAt(region.interactables, x, y);
+      if (interactable && !building) {
+        drawInteractable(ctx, interactable, px, py);
+      }
+    }
+  }
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(-ox * TILE, -oy * TILE, region.size.w * TILE, region.size.h * TILE);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  const nameW = ctx.measureText(region.name).width + 16;
+  ctx.fillRect(-ox * TILE + 4, -oy * TILE + 4, nameW, 20);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '11px Zpix, monospace';
+  ctx.fillText(region.name, -ox * TILE + 12, -oy * TILE + 18);
+
+  drawTimeOverlay(ctx, time, { w: region.size.w, h: region.size.h });
+}
+
 function drawBackground(ctx: CanvasRenderingContext2D, world: WorldMap): void {
   ctx.fillStyle = '#87ceeb';
   ctx.fillRect(0, 0, world.bounds.w * TILE, world.bounds.h * TILE);

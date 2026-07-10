@@ -3,10 +3,11 @@ import { createInitialStates, shortTermSnapshot } from '../entities/residents';
 import { advanceTime, createTime, isDaytime, timeLabel } from './time';
 import { callLLM } from '../ai/llm';
 import { loadUsage, loadConfig } from './config';
-import { getAllRegions, getCenterSpawn, getRegion, getRegionAt, getWorldBounds, getWorldData } from '../world/worldState';
+import { getAllRegions, getCenterSpawn, getRegion, getRegionAt, getWorldData } from '../world/worldState';
+import { getActiveRegion, getActiveRegionId, initActiveRegion, isTransitioning, checkBoundaryTransition, findNearbyPortal, showMapSelection, drawTransitionOverlay, setTransitionCallbacks } from '../world/mapManager';
 import { renderHUD, renderDialogue } from '../ui/hud';
 import { ensureConfigModal } from '../ui/configModal';
-import { drawWorld } from '../render/world';
+import { drawActiveRegionView } from '../render/world';
 import { drawResident } from '../render/sprite';
 import { aStar } from '../world/pathfind';
 import type { Decision, Direction, GeneratedWorld, ResidentPersona, ResidentState, WorldTime } from './types';
@@ -127,6 +128,8 @@ export class Game {
   private lastSave = 0;
   private hasKey = !!loadConfig().apiKey;
   private frameId = 0;
+  private transitionMsg = '';
+  private transitionMsgUntil = 0;
 
   constructor(private canvas: HTMLCanvasElement, private world: GeneratedWorld, private restart: () => Promise<void>) {
     this.ctx = canvas.getContext('2d')!;
@@ -134,6 +137,14 @@ export class Game {
     for (const [id, state] of createInitialStates(world.personas)) {
       this.agents.set(id, new ResidentAgent(state, this.personas));
     }
+    const firstRegion = world.worldMap?.regions[0];
+    if (firstRegion) initActiveRegion(firstRegion.id);
+    setTransitionCallbacks({
+      onStart: (_regionId, regionName) => {
+        this.transitionMsg = `前往 ${regionName}...`;
+        this.transitionMsgUntil = performance.now() + 2000;
+      }
+    });
     this.bindEvents();
     this.resize();
   }
@@ -168,6 +179,9 @@ export class Game {
     }
     if (e.key === 'Enter' && this.mode.type === 'god' && this.selectedId) this.possess(this.selectedId);
     if ((e.key === ' ' || e.key.toLowerCase() === 'e') && this.mode.type === 'possessed') this.tryInteract();
+    if (e.key.toLowerCase() === 'm' && !isTransitioning()) {
+      showMapSelection();
+    }
   };
 
   private onKeyUp = (e: KeyboardEvent) => this.keys.delete(e.key.toLowerCase());
@@ -238,16 +252,35 @@ export class Game {
   private updateControl() {
     const dx = (this.keys.has('d') || this.keys.has('arrowright') ? 1 : 0) - (this.keys.has('a') || this.keys.has('arrowleft') ? 1 : 0);
     const dy = (this.keys.has('s') || this.keys.has('arrowdown') ? 1 : 0) - (this.keys.has('w') || this.keys.has('arrowup') ? 1 : 0);
-    const bounds = getWorldBounds();
+    const activeRegion = getActiveRegion();
     if (this.mode.type === 'god') {
-      this.camera.x = clamp(this.camera.x + dx * PAN_SPEED / this.zoom, 0, bounds.w - 1);
-      this.camera.y = clamp(this.camera.y + dy * PAN_SPEED / this.zoom, 0, bounds.h - 1);
+      if (activeRegion) {
+        const minX = activeRegion.pos.x;
+        const minY = activeRegion.pos.y;
+        const maxX = activeRegion.pos.x + activeRegion.size.w - 1;
+        const maxY = activeRegion.pos.y + activeRegion.size.h - 1;
+        this.camera.x = clamp(this.camera.x + dx * PAN_SPEED / this.zoom, minX, maxX);
+        this.camera.y = clamp(this.camera.y + dy * PAN_SPEED / this.zoom, minY, maxY);
+      } else {
+        this.camera.x = clamp(this.camera.x + dx * PAN_SPEED / this.zoom, 0, 200);
+        this.camera.y = clamp(this.camera.y + dy * PAN_SPEED / this.zoom, 0, 150);
+      }
+      this.checkBoundaryForCamera();
       return;
     }
     const agent = this.agents.get(this.mode.residentId);
     if (!agent || (dx === 0 && dy === 0)) return;
-    agent.state.pos.x = clamp(agent.state.pos.x + dx * BODY_SPEED, 0, bounds.w - 1);
-    agent.state.pos.y = clamp(agent.state.pos.y + dy * BODY_SPEED, 0, bounds.h - 1);
+    if (activeRegion) {
+      const minX = activeRegion.pos.x;
+      const minY = activeRegion.pos.y;
+      const maxX = activeRegion.pos.x + activeRegion.size.w - 1;
+      const maxY = activeRegion.pos.y + activeRegion.size.h - 1;
+      agent.state.pos.x = clamp(agent.state.pos.x + dx * BODY_SPEED, minX, maxX);
+      agent.state.pos.y = clamp(agent.state.pos.y + dy * BODY_SPEED, minY, maxY);
+    } else {
+      agent.state.pos.x = clamp(agent.state.pos.x + dx * BODY_SPEED, 0, 200);
+      agent.state.pos.y = clamp(agent.state.pos.y + dy * BODY_SPEED, 0, 150);
+    }
     if (Math.abs(dx) >= Math.abs(dy)) agent.controller.dir = dx > 0 ? 'right' : 'left';
     else agent.controller.dir = dy > 0 ? 'down' : 'up';
     agent.walkPhase = (agent.walkPhase + 0.15) % 1;
@@ -255,12 +288,72 @@ export class Game {
     if (region) agent.state.region = region;
     this.camera.x += (agent.state.pos.x - this.camera.x) * 0.25;
     this.camera.y += (agent.state.pos.y - this.camera.y) * 0.25;
+
+    if (!isTransitioning()) {
+      checkBoundaryTransition(
+        agent.state.pos,
+        [...this.agents.keys()],
+        (regionId, target, ids) => this.teleportAgents(regionId, target, ids)
+      );
+    }
+  }
+
+  private checkBoundaryForCamera() {
+    if (isTransitioning()) return;
+    const activeRegion = getActiveRegion();
+    if (!activeRegion) return;
+
+    const margin = 0.3;
+    const localX = this.camera.x - activeRegion.pos.x;
+    const localY = this.camera.y - activeRegion.pos.y;
+
+    let dir: 'left' | 'right' | 'up' | 'down' | null = null;
+    if (localX < margin) dir = 'left';
+    else if (localX > activeRegion.size.w - margin) dir = 'right';
+    else if (localY < margin) dir = 'up';
+    else if (localY > activeRegion.size.h - margin) dir = 'down';
+    if (!dir) return;
+
+    checkBoundaryTransition(
+      this.camera,
+      [...this.agents.keys()],
+      (regionId, target, ids) => this.teleportAgents(regionId, target, ids)
+    );
+  }
+
+  private teleportAgents(regionId: string, target: import('../map/types').Vec2, agentIds: string[]) {
+    const region = getRegion(regionId);
+    if (!region) return;
+    for (const id of agentIds) {
+      const agent = this.agents.get(id);
+      if (!agent) continue;
+      const offsetX = (Math.random() - 0.5) * 6;
+      const offsetY = (Math.random() - 0.5) * 4;
+      agent.state.pos.x = clamp(target.x + offsetX, region.pos.x + 1, region.pos.x + region.size.w - 2);
+      agent.state.pos.y = clamp(target.y + offsetY, region.pos.y + 1, region.pos.y + region.size.h - 2);
+      agent.state.region = regionId;
+      agent.clearPath();
+    }
   }
 
   private tryInteract() {
     if (this.mode.type !== 'possessed') return;
     const self = this.agents.get(this.mode.residentId);
     if (!self) return;
+
+    const activeRegId = getActiveRegionId();
+    if (activeRegId) {
+      const localPos = {
+        x: self.state.pos.x - (getRegion(activeRegId)?.pos.x ?? 0),
+        y: self.state.pos.y - (getRegion(activeRegId)?.pos.y ?? 0)
+      };
+      const portal = findNearbyPortal(activeRegId, localPos, 2);
+      if (portal) {
+        showMapSelection();
+        return;
+      }
+    }
+
     let nearest: ResidentAgent | null = null;
     let best = 1.8;
     for (const agent of this.agents.values()) {
@@ -320,22 +413,28 @@ export class Game {
 
   private render() {
     const ctx = this.ctx;
-    ctx.fillStyle = '#87ceeb';
+    ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     ctx.save();
     ctx.scale(this.zoom, this.zoom);
     ctx.translate(this.canvas.width / this.zoom / 2 - this.camera.x * TILE, this.canvas.height / this.zoom / 2 - this.camera.y * TILE);
 
-    const worldMap = this.world.worldMap;
-    if (worldMap) {
-      drawWorld(ctx, worldMap, this.time);
+    const activeRegion = getActiveRegion();
+    if (activeRegion) {
+      drawActiveRegionView(ctx, activeRegion, this.time, this.canvas.width / this.zoom, this.canvas.height / this.zoom);
     }
 
     const sprites: Array<{ y: number; draw: () => void }> = [];
     for (const agent of this.agents.values()) {
       const persona = this.personas.get(agent.state.id);
       if (!persona) continue;
+      const activeReg = getActiveRegion();
+      if (activeReg) {
+        const rx = agent.state.pos.x - activeReg.pos.x;
+        const ry = agent.state.pos.y - activeReg.pos.y;
+        if (rx < -1 || rx > activeReg.size.w + 1 || ry < -1 || ry > activeReg.size.h + 1) continue;
+      }
       const sx = agent.state.pos.x * TILE;
       const sy = agent.state.pos.y * TILE;
       sprites.push({
@@ -352,10 +451,22 @@ export class Game {
     for (const sprite of sprites) sprite.draw();
     ctx.restore();
 
+    drawTransitionOverlay(ctx, this.canvas.width, this.canvas.height, this.time);
+
+    if (this.transitionMsgUntil > performance.now()) {
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(0, this.canvas.height / this.zoom / 2 - 20, this.canvas.width, 40);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '12px Zpix, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(this.transitionMsg, this.canvas.width / 2, this.canvas.height / this.zoom / 2 + 5);
+      ctx.textAlign = 'start';
+    }
+
     const activeId = this.mode.type === 'possessed' ? this.mode.residentId : this.selectedId;
     const active = activeId ? this.agents.get(activeId) : null;
     const activePersona = activeId ? this.personas.get(activeId) : null;
-    const cameraRegionId = active?.state.region ?? getRegionAt(this.camera.x, this.camera.y) ?? getAllRegions()[0]?.id ?? '';
+    const cameraRegionId = getActiveRegionId() ?? getAllRegions()[0]?.id ?? '';
     const regionName = getRegion(cameraRegionId)?.name ?? '荒野';
     const usage = loadUsage();
     renderHUD(document.getElementById('hud')!, {
@@ -370,8 +481,8 @@ export class Game {
       tokenUsed: usage.promptTokens + usage.completionTokens,
       tokenBudget: loadConfig().dailyTokenBudget,
       interactionHint: this.mode.type === 'god'
-        ? 'WASD/方向键移动镜头 · 滚轮缩放 · 点击村民直接控制 · Esc设置'
-        : 'WASD移动 · 空格/E互动 · Esc返回上帝视角'
+        ? 'WASD移动镜头 · 滚轮缩放 · 点击村民控制 · M地图 · Esc设置'
+        : 'WASD移动 · 空格/E互动 · M地图 · Esc返回上帝视角'
     });
 
     let line: { speaker: string; text: string } | null = null;

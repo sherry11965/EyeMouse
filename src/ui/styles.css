@@ -378,3 +378,21 @@ html, body, #app {
   background: var(--accent);
   border-color: var(--accent);
 }
+
+/* ── Map Selection ── */
+.map-region-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.map-region-btn {
+  width: 100%;
+  text-align: left !important;
+  font-size: 11px !important;
+}
+
+.map-region-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
