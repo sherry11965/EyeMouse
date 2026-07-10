@@ -1,4 +1,5 @@
-import type { Interactable, InteractableType, BiomeType, Building, MapObject } from './types';
+import type { Interactable, BiomeType, Building, MapObject } from './types';
+import { pickLandmarksForBiome } from './landmarks';
 
 class SeededRandom {
   private seed: number;
@@ -15,39 +16,7 @@ class SeededRandom {
   nextInt(min: number, max: number): number {
     return Math.floor(this.next() * (max - min + 1)) + min;
   }
-
-  pick<T>(arr: T[]): T {
-    return arr[this.nextInt(0, arr.length - 1)];
-  }
-
-  chance(probability: number): boolean {
-    return this.next() < probability;
-  }
 }
-
-const BIOME_INTERACTABLES: Record<BiomeType, InteractableType[]> = {
-  forest: ['quest', 'item', 'portal'],
-  plains: ['quest', 'item', 'npc'],
-  desert: ['quest', 'item'],
-  mountain: ['quest', 'item', 'portal'],
-  coastal: ['quest', 'item', 'npc'],
-  swamp: ['quest', 'item'],
-  tundra: ['quest', 'item'],
-  volcanic: ['quest', 'item', 'portal']
-};
-
-const INTERACTABLE_LABELS: Record<InteractableType, string[]> = {
-  door: ['门', '入口', '大门'],
-  bed: ['床', '床铺', '休息处'],
-  chest: ['宝箱', '箱子', '储物箱'],
-  npc: ['村民', '旅人', '商人'],
-  item: ['物品', '掉落物', '资源'],
-  crafting: ['工作台', '锻造台', '炼金台'],
-  storage: ['仓库', '储物柜', '储藏室'],
-  portal: ['传送门', '魔法阵', '次元裂隙'],
-  quest: ['任务标记', '感叹号', '任务点'],
-  shop: ['商店', '柜台', '交易处']
-};
 
 export function generateInteractables(
   biome: BiomeType,
@@ -57,49 +26,54 @@ export function generateInteractables(
 ): Interactable[] {
   const rng = new SeededRandom(seed);
   const interactables: Interactable[] = [];
-  const types = BIOME_INTERACTABLES[biome] || ['quest', 'item'];
 
   for (const building of buildings) {
     interactables.push(...building.interactables);
   }
 
-  const worldInteractableCount = rng.nextInt(3, 6);
-  for (let i = 0; i < worldInteractableCount; i++) {
-    const type = rng.pick(types);
-    const labels = INTERACTABLE_LABELS[type];
-    const label = rng.pick(labels);
+  const landmarkCount = rng.nextInt(6, 10);
+  const landmarks = pickLandmarksForBiome(biome, seed + 7777, landmarkCount);
 
-    let pos = { x: 0, y: 0 };
-    let placed = false;
-
-    for (let attempt = 0; attempt < 10 && !placed; attempt++) {
-      const x = rng.nextInt(2, 45);
-      const y = rng.nextInt(2, 33);
-
-      const occupiedByBuilding = buildings.some(b =>
-        x >= b.pos.x - 1 && x < b.pos.x + b.size.w + 1 &&
-        y >= b.pos.y - 1 && y < b.pos.y + b.size.h + 1
-      );
-
-      const occupiedByObject = objects.some(o => o.pos.x === x && o.pos.y === y);
-
-      if (!occupiedByBuilding && !occupiedByObject) {
-        pos = { x, y };
-        placed = true;
-      }
-    }
-
-    if (placed) {
+  for (const landmark of landmarks) {
+    const pos = findPlacement(rng, buildings, objects, interactables);
+    if (pos) {
       interactables.push({
-        id: `interactable_${biome}_${i}`,
-        type,
+        id: landmark.id,
+        type: landmark.type,
         pos,
-        label
+        label: landmark.label,
       });
     }
   }
 
   return interactables;
+}
+
+function findPlacement(
+  rng: SeededRandom,
+  buildings: Building[],
+  objects: MapObject[],
+  existing: Interactable[]
+): { x: number; y: number } | null {
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const x = rng.nextInt(3, 44);
+    const y = rng.nextInt(3, 32);
+
+    const occupiedByBuilding = buildings.some(b =>
+      x >= b.pos.x - 2 && x < b.pos.x + b.size.w + 2 &&
+      y >= b.pos.y - 2 && y < b.pos.y + b.size.h + 2
+    );
+    if (occupiedByBuilding) continue;
+
+    const occupiedByObject = objects.some(o => o.pos.x === x && o.pos.y === y);
+    if (occupiedByObject) continue;
+
+    const occupiedByInteractable = existing.some(i => i.pos.x === x && i.pos.y === y);
+    if (occupiedByInteractable) continue;
+
+    return { x, y };
+  }
+  return null;
 }
 
 export function getInteractableAt(interactables: Interactable[], x: number, y: number): Interactable | null {

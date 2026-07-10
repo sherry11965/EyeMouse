@@ -223,3 +223,93 @@ registerHandler('storage', (_interactable, _context) => {
     data: { action: 'open_storage' }
   };
 });
+
+registerHandler('landmark', (interactable, _context) => {
+  const descriptions = [
+    '这里似乎隐藏着什么秘密...',
+    '你能感受到一股微弱的能量波动。',
+    '这个地方有着悠久的历史。',
+    '周围的空气似乎变得不同了。',
+    '这里曾经发生过什么重要的事。',
+  ];
+  const desc = descriptions[Math.floor(Math.random() * descriptions.length)];
+  return {
+    success: true,
+    message: `你来到了${interactable.label}。${desc}`,
+    type: 'info',
+    data: { landmarkId: interactable.id }
+  };
+});
+
+registerHandler('home', (interactable, _context) => {
+  return {
+    success: true,
+    message: `这是${interactable.label}，门紧闭着。也许改天可以来拜访。`,
+    type: 'info',
+    data: { homeId: interactable.id }
+  };
+});
+
+registerHandler('gather', (interactable, _context) => {
+  return {
+    success: true,
+    message: `${interactable.label}是个热闹的地方，人们喜欢在这里聚会交流。`,
+    type: 'info',
+    data: { gatherId: interactable.id }
+  };
+});
+
+registerHandler('field', (interactable, _context) => {
+  return {
+    success: true,
+    message: `这片${interactable.label}长势不错，丰收在望。`,
+    type: 'info',
+    data: { fieldId: interactable.id }
+  };
+});
+
+registerHandler('dock', (interactable, _context) => {
+  return {
+    success: true,
+    message: `${interactable.label}停靠着几艘小船，海风带来咸咸的味道。`,
+    type: 'info',
+    data: { dockId: interactable.id }
+  };
+});
+
+registerHandler('stall', (interactable, _context) => {
+  return {
+    success: true,
+    message: `${interactable.label}上摆满了各种商品，摊主热情地招呼着你。`,
+    type: 'info',
+    data: { stallId: interactable.id }
+  };
+});
+
+registerHandler('building', (interactable, _context) => {
+  return {
+    success: true,
+    message: `你来到了${interactable.label}。建筑看起来有些年头了。`,
+    type: 'info',
+    data: { buildingId: interactable.id }
+  };
+});
+
+registerHandler('board', (interactable, _context) => {
+  const notices = [
+    '招募冒险者探索未知区域',
+    '丢失了一只橘猫，请联系猎人小屋',
+    '今晚在广场举办篝火晚会',
+    '收购各种矿石，价格公道',
+    '警告：近期森林深处出现异常，请勿深入',
+    '新到货物，欢迎光临',
+    '寻找失踪的旅人，提供线索者有赏',
+  ];
+  const notice = notices[Math.floor(Math.random() * notices.length)];
+  return {
+    success: true,
+    message: `${interactable.label}上贴着一张告示：「${notice}」`,
+    type: 'info',
+    data: { boardId: interactable.id, notice }
+  };
+});

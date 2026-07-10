@@ -20,7 +20,9 @@ export type ObjectType =
 
 export type InteractableType =
   | 'door' | 'bed' | 'chest' | 'npc' | 'item'
-  | 'crafting' | 'storage' | 'portal' | 'quest' | 'shop';
+  | 'crafting' | 'storage' | 'portal' | 'quest' | 'shop'
+  | 'landmark' | 'home' | 'gather' | 'field' | 'dock'
+  | 'stall' | 'building' | 'board';
 
 export interface Tile {
   terrain: TerrainType;
@@ -62,6 +64,7 @@ export interface Interactable {
 export interface Region {
   id: string;
   name: string;
+  description: string;
   biome: BiomeType;
   pos: Vec2;
   size: Size;

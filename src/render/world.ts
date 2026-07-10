@@ -48,7 +48,15 @@ const INTERACTABLE_COLORS: Record<string, string> = {
   storage: '#909aa0',
   portal: '#9b80f0',
   quest: '#ff6b6b',
-  shop: '#4fc3f7'
+  shop: '#4fc3f7',
+  landmark: '#e6a817',
+  home: '#ff9a76',
+  gather: '#82e0aa',
+  field: '#a8d8a8',
+  dock: '#5dade2',
+  stall: '#f0c0a0',
+  building: '#a0a8b0',
+  board: '#ffd93d'
 };
 
 export function drawWorld(
@@ -280,7 +288,25 @@ function drawInteractable(ctx: CanvasRenderingContext2D, interactable: Interacta
   const color = INTERACTABLE_COLORS[interactable.type] || '#ffffff';
   ctx.fillStyle = color;
   ctx.globalAlpha = 0.7;
-  ctx.fillRect(x + 4, y + 4, 8, 8);
+
+  if (interactable.type === 'landmark') {
+    ctx.beginPath();
+    ctx.moveTo(x + 8, y + 2);
+    ctx.lineTo(x + 14, y + 8);
+    ctx.lineTo(x + 8, y + 14);
+    ctx.lineTo(x + 2, y + 8);
+    ctx.closePath();
+    ctx.fill();
+  } else if (interactable.type === 'board') {
+    ctx.fillRect(x + 3, y + 3, 10, 10);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(x + 5, y + 5, 6, 1);
+    ctx.fillRect(x + 5, y + 7, 6, 1);
+    ctx.fillRect(x + 5, y + 9, 4, 1);
+  } else {
+    ctx.fillRect(x + 4, y + 4, 8, 8);
+  }
+
   ctx.globalAlpha = 1;
 
   if (interactable.type === 'quest') {

@@ -5,6 +5,7 @@ import { generateTile } from './generator';
 import { generateBuildings } from './buildings';
 import { generateObjects } from './objects';
 import { generateInteractables } from './interactables';
+import { getRegionDescription } from './landmarks';
 
 class SeededRandom {
   private seed: number;
@@ -131,6 +132,7 @@ export function generateRegion(
   return {
     id,
     name,
+    description: getRegionDescription(biome, seed),
     biome,
     pos,
     size,
