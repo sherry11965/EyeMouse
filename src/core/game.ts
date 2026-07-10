@@ -9,6 +9,7 @@ import { renderHUD, renderDialogue, formatTokens } from '../ui/hud';
 import { ensureConfigModal } from '../ui/configModal';
 import { drawWorld } from '../render/world';
 import { drawResident } from '../render/sprite';
+import { aStar } from '../world/pathfind';
 import type { Decision, Direction, RegionId, ResidentState, WorldTime } from '../core/types';
 
 setPersonas(RESIDENTS);
@@ -43,12 +44,18 @@ class ResidentAgent {
       return;
     }
     if (now < this.nextDecisionAt) return;
+    const cfg = loadConfig();
+    if (!cfg.apiKey) {
+      this.fallbackWander();
+      this.nextDecisionAt = now + 4000 + Math.random() * 3000;
+      return;
+    }
     this.nextDecisionAt = now + DECISION_INTERVAL + Math.random() * 4000;
     this.busy = true;
     try {
       await this.decide(others, time);
     } catch (e) {
-      console.warn('decide failed', e);
+      console.warn('decide failed', (e as Error).message);
     } finally {
       this.busy = false;
     }
@@ -98,6 +105,27 @@ class ResidentAgent {
   }
 
   setThought(t: string) { this.thought = t; }
+
+  private fallbackWander() {
+    const persona = getResident(this.state.id);
+    if (!persona) return;
+    const region = getRegion(persona.workplace);
+    const target = {
+      x: clamp(this.state.pos.x + Math.round((Math.random() - 0.5) * 6), 1, region.size.w - 2),
+      y: clamp(this.state.pos.y + Math.round((Math.random() - 0.5) * 6), 1, region.size.h - 2)
+    };
+    const goal = persona.workplace === this.state.region ? target : { ...region.spawn };
+    if (!this.controller.hasPath()) {
+      const blocked = (x: number, y: number) => false;
+      const path = aStar(this.state.pos, goal, blocked, region.size);
+      if (path) this.controller.setPath(path);
+    }
+    this.thought = '（离线巡游）';
+  }
+}
+
+function clamp(n: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, n));
 }
 
 function safeParse(s: string): Decision {
