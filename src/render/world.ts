@@ -54,20 +54,8 @@ const INTERACTABLE_COLORS: Record<string, string> = {
 export function drawWorld(
   ctx: CanvasRenderingContext2D,
   world: WorldMap,
-  camera: Vec2,
-  zoom: number,
   time: WorldTime
 ): void {
-  const screenW = ctx.canvas.width;
-  const screenH = ctx.canvas.height;
-
-  ctx.save();
-  ctx.scale(zoom, zoom);
-  ctx.translate(
-    (screenW / zoom) / 2 - camera.x * TILE,
-    (screenH / zoom) / 2 - camera.y * TILE
-  );
-
   drawBackground(ctx, world);
 
   for (const region of world.regions) {
@@ -75,8 +63,6 @@ export function drawWorld(
   }
 
   drawTimeOverlay(ctx, time, world.bounds);
-
-  ctx.restore();
 }
 
 function drawBackground(ctx: CanvasRenderingContext2D, world: WorldMap): void {

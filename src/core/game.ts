@@ -323,14 +323,15 @@ export class Game {
     ctx.fillStyle = '#87ceeb';
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    const worldMap = this.world.worldMap;
-    if (worldMap) {
-      drawWorld(ctx, worldMap, this.camera, this.zoom, this.time);
-    }
-
     ctx.save();
     ctx.scale(this.zoom, this.zoom);
     ctx.translate(this.canvas.width / this.zoom / 2 - this.camera.x * TILE, this.canvas.height / this.zoom / 2 - this.camera.y * TILE);
+
+    const worldMap = this.world.worldMap;
+    if (worldMap) {
+      drawWorld(ctx, worldMap, this.time);
+    }
+
     const sprites: Array<{ y: number; draw: () => void }> = [];
     for (const agent of this.agents.values()) {
       const persona = this.personas.get(agent.state.id);

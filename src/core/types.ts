@@ -99,3 +99,14 @@ export interface GeneratedWorld {
   seed: number;
   worldMap?: import('../map/types').WorldMap;
 }
+
+export interface GeneratedWorld {
+  theme: string;
+  worldName: string;
+  story: string;
+  regions: GeneratedRegion[];
+  personas: ResidentPersona[];
+  events: string[];
+  seed: number;
+  worldMap?: import('../map/types').WorldMap;
+}
