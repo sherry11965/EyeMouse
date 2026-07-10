@@ -15,11 +15,18 @@ export function createInitialStates(personas: ResidentPersona[]): Map<string, Re
     
     let spawnPos = { x: 22, y: 17 };
     if (region) {
-      const spawn = getSpawnPoint(region);
+      const localSpawn = getSpawnPoint(region);
+      const offsetX = (index % 3) * 2 - 2;
+      const offsetY = Math.floor(index / 3) * 2;
       spawnPos = {
-        x: region.pos.x + clamp(spawn.x + (index % 3) * 2 - 2, 1, region.size.w - 2),
-        y: region.pos.y + clamp(spawn.y + Math.floor(index / 3) * 2, 1, region.size.h - 2)
+        x: region.pos.x + localSpawn.x + offsetX,
+        y: region.pos.y + localSpawn.y + offsetY
       };
+      
+      if (spawnPos.x < region.pos.x) spawnPos.x = region.pos.x + 1;
+      if (spawnPos.x >= region.pos.x + region.size.w) spawnPos.x = region.pos.x + region.size.w - 2;
+      if (spawnPos.y < region.pos.y) spawnPos.y = region.pos.y + 1;
+      if (spawnPos.y >= region.pos.y + region.size.h) spawnPos.y = region.pos.y + region.size.h - 2;
     }
     
     out.set(p.id, {
@@ -38,8 +45,4 @@ export function createInitialStates(personas: ResidentPersona[]): Map<string, Re
 
 export function shortTermSnapshot(state: ResidentState, max = 8): string {
   return state.shortTerm.slice(-max).map(m => `[${m.kind}] ${m.text}`).join(' | ');
-}
-
-function clamp(n: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, n));
 }
