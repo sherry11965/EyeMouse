@@ -98,14 +98,14 @@ class ResidentAgent {
   private fallbackWander() {
     const region = getRegion(this.state.region);
     if (!region) return;
-    const ox = region.worldOffset.x;
-    const oy = region.worldOffset.y;
+    const ox = region.pos.x;
+    const oy = region.pos.y;
     const relStart = { x: Math.round(this.state.pos.x - ox), y: Math.round(this.state.pos.y - oy) };
     const relGoal = {
       x: clamp(relStart.x + Math.round((Math.random() - 0.5) * 12), 1, region.size.w - 2),
       y: clamp(relStart.y + Math.round((Math.random() - 0.5) * 12), 1, region.size.h - 2)
     };
-    const blocked = (x: number, y: number) => region.interactables.some(i => i.x === x && i.y === y);
+    const blocked = (x: number, y: number) => region.interactables.some(i => i.pos.x === x && i.pos.y === y);
     const path = aStar(relStart, relGoal, blocked, region.size);
     if (path) this.controller.setPath(path.map(p => ({ x: p.x + ox, y: p.y + oy })));
     this.thought = '（自由活动）';
