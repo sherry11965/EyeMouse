@@ -53,12 +53,12 @@ function drawSprite(ctx: CanvasRenderingContext2D, pixels: Color[][], ox: number
 
 function characterSprites(): Color[][][] {
   const chars: Array<{ hair: string; skin: string; shirt: string; pants: string; shoes: string }> = [
-    { hair: '#5c3a1e', skin: '#f5c6a0', shirt: '#e84393', pants: '#2d3436', shoes: '#6c5ce7' },
-    { hair: '#2d3436', skin: '#fad390', shirt: '#0984e3', pants: '#2d3436', shoes: '#e17055' },
-    { hair: '#6c5ce7', skin: '#f5c6a0', shirt: '#00b894', pants: '#2d3436', shoes: '#fdcb6e' },
-    { hair: '#d63031', skin: '#fad390', shirt: '#e17055', pants: '#2d3436', shoes: '#636e72' },
-    { hair: '#0984e3', skin: '#f5c6a0', shirt: '#a29bfe', pants: '#2d3436', shoes: '#fab1a0' },
-    { hair: '#e17055', skin: '#fad390', shirt: '#fdcb6e', pants: '#2d3436', shoes: '#74b9ff' },
+    { hair: '#8b5a3c', skin: '#ffd5b8', shirt: '#ff7eb3', pants: '#4a5568', shoes: '#9b80f0' },
+    { hair: '#4a5568', skin: '#ffe5a0', shirt: '#4fc3f7', pants: '#4a5568', shoes: '#ff9a76' },
+    { hair: '#9b80f0', skin: '#ffd5b8', shirt: '#4fd1a0', pants: '#4a5568', shoes: '#ffd93d' },
+    { hair: '#ff6b6b', skin: '#ffe5a0', shirt: '#ff9a76', pants: '#4a5568', shoes: '#a0aec0' },
+    { hair: '#4fc3f7', skin: '#ffd5b8', shirt: '#c4b5fd', pants: '#4a5568', shoes: '#ffb8a0' },
+    { hair: '#ff9a76', skin: '#ffe5a0', shirt: '#ffd93d', pants: '#4a5568', shoes: '#90cdf4' },
   ];
 
   const frames: Color[][][] = [];
@@ -88,7 +88,7 @@ function makeCharFrame(
     setRow(px, 2 + bob, 6, 4, c.hair);
     setRow(px, 3 + bob, 6, 4, c.hair);
     setRow(px, 4 + bob, 6, 4, c.skin);
-    px[4 + bob][7] = '#2d3436'; px[4 + bob][8] = '#2d3436';
+    px[4 + bob][7] = '#4a5568'; px[4 + bob][8] = '#4a5568';
     setRow(px, 5 + bob, 6, 4, c.skin);
     setRow(px, 6 + bob, 5, 6, c.shirt);
     setRow(px, 7 + bob, 5, 6, c.shirt);
@@ -102,7 +102,7 @@ function makeCharFrame(
     setRow(px, 2 + bob, 6, 4, c.hair);
     setRow(px, 3 + bob, 6, 4, c.hair);
     setRow(px, 4 + bob, 6, 4, c.skin);
-    px[4 + bob][7] = '#2d3436';
+    px[4 + bob][7] = '#4a5568';
     setRow(px, 5 + bob, 6, 4, c.skin);
     setRow(px, 6 + bob, 5, 6, c.shirt);
     setRow(px, 7 + bob, 5, 6, c.shirt);
@@ -116,7 +116,7 @@ function makeCharFrame(
     setRow(px, 2 + bob, 6, 4, c.hair);
     setRow(px, 3 + bob, 6, 4, c.hair);
     setRow(px, 4 + bob, 6, 4, c.skin);
-    px[4 + bob][9] = '#2d3436';
+    px[4 + bob][9] = '#4a5568';
     setRow(px, 5 + bob, 6, 4, c.skin);
     setRow(px, 6 + bob, 5, 6, c.shirt);
     setRow(px, 7 + bob, 5, 6, c.shirt);
@@ -151,44 +151,44 @@ function setRow(px: Color[][], y: number, x: number, len: number, color: string)
 
 function terrainTiles(): Color[][][] {
   const grass = (): Color[][] => {
-    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#4a7c3f'));
-    for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) px[y][x] = '#3d6b35';
-    px[3][5] = '#5a9c4f'; px[7][11] = '#5a9c4f'; px[12][3] = '#5a9c4f';
+    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#7ec87e'));
+    for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) px[y][x] = '#6ab86a';
+    px[3][5] = '#8ed88e'; px[7][11] = '#8ed88e'; px[12][3] = '#8ed88e';
     return px;
   };
 
   const dirt = (): Color[][] => {
-    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#8b6914'));
-    for (let y = 0; y < H; y += 3) for (let x = 0; x < W; x += 3) px[y][x] = '#7a5c10';
-    px[2][6] = '#9a7a20'; px[8][12] = '#9a7a20';
+    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#d4a574'));
+    for (let y = 0; y < H; y += 3) for (let x = 0; x < W; x += 3) px[y][x] = '#c49564';
+    px[2][6] = '#e4b584'; px[8][12] = '#e4b584';
     return px;
   };
 
   const water = (): Color[][] => {
-    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#2980b9'));
-    for (let y = 0; y < H; y += 4) for (let x = 0; x < W; x++) px[y][x] = '#3498db';
-    px[1][3] = '#5dade2'; px[5][10] = '#5dade2'; px[9][7] = '#5dade2';
+    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#5dade2'));
+    for (let y = 0; y < H; y += 4) for (let x = 0; x < W; x++) px[y][x] = '#7ec8e3';
+    px[1][3] = '#aed6f1'; px[5][10] = '#aed6f1'; px[9][7] = '#aed6f1';
     return px;
   };
 
   const stone = (): Color[][] => {
-    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#636e72'));
-    for (let y = 0; y < H; y += 4) for (let x = 0; x < W; x += 4) px[y][x] = '#555e62';
-    for (let x = 0; x < W; x += 4) px[2][x] = '#6d787c';
+    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#a0a8b0'));
+    for (let y = 0; y < H; y += 4) for (let x = 0; x < W; x += 4) px[y][x] = '#909aa0';
+    for (let x = 0; x < W; x += 4) px[2][x] = '#b0b8c0';
     return px;
   };
 
   const sand = (): Color[][] => {
     const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#f5deb3'));
     for (let y = 0; y < H; y += 3) for (let x = 0; x < W; x += 3) px[y][x] = '#e8d5a0';
-    px[5][8] = '#f0d89f';
+    px[5][8] = '#fff0c0';
     return px;
   };
 
   const darkGrass = (): Color[][] => {
-    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#2d5a1e'));
-    for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) px[y][x] = '#235015';
-    px[4][7] = '#3a6b2a'; px[10][3] = '#3a6b2a';
+    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#5a9c4f'));
+    for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) px[y][x] = '#4a8c3f';
+    px[4][7] = '#6aac5f'; px[10][3] = '#6aac5f';
     return px;
   };
 
@@ -197,39 +197,39 @@ function terrainTiles(): Color[][][] {
 
 function buildingTiles(): Color[][][] {
   const wall = (): Color[][] => {
-    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#c0392b'));
-    for (let x = 0; x < W; x += 4) { px[0][x] = '#a93226'; px[1][x] = '#a93226'; }
-    for (let y = 0; y < H; y += 4) { px[y][0] = '#a93226'; px[y][1] = '#a93226'; }
+    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#e8a090'));
+    for (let x = 0; x < W; x += 4) { px[0][x] = '#d89080'; px[1][x] = '#d89080'; }
+    for (let y = 0; y < H; y += 4) { px[y][0] = '#d89080'; px[y][1] = '#d89080'; }
     return px;
   };
 
   const roof = (): Color[][] => {
-    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#8e44ad'));
-    for (let x = 0; x < W; x += 2) px[0][x] = '#6c3483';
-    for (let y = 0; y < H; y += 3) for (let x = 0; x < W; x++) px[y][x] = '#7d3c98';
+    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#c080d0'));
+    for (let x = 0; x < W; x += 2) px[0][x] = '#a060b0';
+    for (let y = 0; y < H; y += 3) for (let x = 0; x < W; x++) px[y][x] = '#b070c0';
     return px;
   };
 
   const door = (): Color[][] => {
-    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#c0392b'));
-    px[6][6] = '#5a3e1b'; px[6][7] = '#5a3e1b'; px[6][8] = '#5a3e1b'; px[6][9] = '#5a3e1b';
-    for (let y = 7; y < 14; y++) { px[y][6] = '#5a3e1b'; px[y][7] = '#6b4a25'; px[y][8] = '#6b4a25'; px[y][9] = '#5a3e1b'; }
+    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#e8a090'));
+    px[6][6] = '#8b6914'; px[6][7] = '#8b6914'; px[6][8] = '#8b6914'; px[6][9] = '#8b6914';
+    for (let y = 7; y < 14; y++) { px[y][6] = '#8b6914'; px[y][7] = '#a07820'; px[y][8] = '#a07820'; px[y][9] = '#8b6914'; }
     px[10][8] = '#f0c040';
     return px;
   };
 
   const window = (): Color[][] => {
-    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#c0392b'));
-    for (let y = 5; y < 10; y++) for (let x = 5; x < 10; x++) px[y][x] = '#74b9ff';
-    px[5][5] = '#5a3e1b'; px[5][9] = '#5a3e1b'; px[9][5] = '#5a3e1b'; px[9][9] = '#5a3e1b';
-    px[7][5] = '#5a3e1b'; px[7][9] = '#5a3e1b'; px[5][7] = '#5a3e1b'; px[9][7] = '#5a3e1b';
+    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#e8a090'));
+    for (let y = 5; y < 10; y++) for (let x = 5; x < 10; x++) px[y][x] = '#87ceeb';
+    px[5][5] = '#8b6914'; px[5][9] = '#8b6914'; px[9][5] = '#8b6914'; px[9][9] = '#8b6914';
+    px[7][5] = '#8b6914'; px[7][9] = '#8b6914'; px[5][7] = '#8b6914'; px[9][7] = '#8b6914';
     return px;
   };
 
   const woodFloor = (): Color[][] => {
-    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#a0522d'));
-    for (let y = 0; y < H; y += 4) for (let x = 0; x < W; x++) px[y][x] = '#8b4513';
-    for (let x = 0; x < W; x += 8) for (let y = 0; y < H; y++) px[y][x] = '#8b4513';
+    const px: Color[][] = Array.from({ length: H }, () => Array(W).fill('#d4a574'));
+    for (let y = 0; y < H; y += 4) for (let x = 0; x < W; x++) px[y][x] = '#c49564';
+    for (let x = 0; x < W; x += 8) for (let y = 0; y < H; y++) px[y][x] = '#c49564';
     return px;
   };
 
@@ -239,46 +239,46 @@ function buildingTiles(): Color[][][] {
 function objectTiles(): Color[][][] {
   const tree = (): Color[][] => {
     const px: Color[][] = Array.from({ length: H }, () => Array(W).fill(null));
-    for (let y = 1; y < 5; y++) for (let x = 4; x < 12; x++) px[y][x] = '#27ae60';
-    for (let y = 0; y < 3; y++) for (let x = 5; x < 11; x++) px[y][x] = '#2ecc71';
-    px[1][6] = '#1abc9c'; px[2][9] = '#1abc9c';
-    for (let y = 5; y < 14; y++) { px[y][7] = '#6d4c2a'; px[y][8] = '#5a3e1b'; }
+    for (let y = 1; y < 5; y++) for (let x = 4; x < 12; x++) px[y][x] = '#4ecb71';
+    for (let y = 0; y < 3; y++) for (let x = 5; x < 11; x++) px[y][x] = '#5edb81';
+    px[1][6] = '#6eec91'; px[2][9] = '#6eec91';
+    for (let y = 5; y < 14; y++) { px[y][7] = '#a07840'; px[y][8] = '#907030'; }
     return px;
   };
 
   const flower = (): Color[][] => {
     const px: Color[][] = Array.from({ length: H }, () => Array(W).fill(null));
-    px[8][7] = '#27ae60'; px[9][7] = '#27ae60'; px[10][7] = '#27ae60';
-    px[6][7] = '#e74c3c'; px[6][8] = '#e74c3c'; px[7][7] = '#f39c12';
-    px[5][7] = '#e74c3c';
+    px[8][7] = '#4ecb71'; px[9][7] = '#4ecb71'; px[10][7] = '#4ecb71';
+    px[6][7] = '#ff6b6b'; px[6][8] = '#ff6b6b'; px[7][7] = '#ffd93d';
+    px[5][7] = '#ff6b6b';
     return px;
   };
 
   const fountain = (): Color[][] => {
     const px: Color[][] = Array.from({ length: H }, () => Array(W).fill(null));
-    for (let y = 4; y < 12; y++) for (let x = 3; x < 13; x++) px[y][x] = '#95a5a6';
-    for (let y = 5; y < 11; y++) for (let x = 4; x < 12; x++) px[y][x] = '#74b9ff';
-    for (let y = 6; y < 10; y++) for (let x = 5; x < 11; x++) px[y][x] = '#81ecec';
-    px[7][7] = '#dfe6e9'; px[7][8] = '#dfe6e9';
-    px[3][7] = '#95a5a6'; px[3][8] = '#95a5a6';
-    px[2][7] = '#74b9ff'; px[2][8] = '#74b9ff';
+    for (let y = 4; y < 12; y++) for (let x = 3; x < 13; x++) px[y][x] = '#c0c8d0';
+    for (let y = 5; y < 11; y++) for (let x = 4; x < 12; x++) px[y][x] = '#87ceeb';
+    for (let y = 6; y < 10; y++) for (let x = 5; x < 11; x++) px[y][x] = '#a0e0f0';
+    px[7][7] = '#e0f0f8'; px[7][8] = '#e0f0f8';
+    px[3][7] = '#c0c8d0'; px[3][8] = '#c0c8d0';
+    px[2][7] = '#87ceeb'; px[2][8] = '#87ceeb';
     return px;
   };
 
   const bench = (): Color[][] => {
     const px: Color[][] = Array.from({ length: H }, () => Array(W).fill(null));
-    for (let x = 3; x < 13; x++) px[7][x] = '#6d4c2a';
-    for (let x = 3; x < 13; x++) px[8][x] = '#5a3e1b';
-    px[9][4] = '#5a3e1b'; px[9][5] = '#5a3e1b'; px[9][10] = '#5a3e1b'; px[9][11] = '#5a3e1b';
-    px[10][4] = '#5a3e1b'; px[10][5] = '#5a3e1b'; px[10][10] = '#5a3e1b'; px[10][11] = '#5a3e1b';
+    for (let x = 3; x < 13; x++) px[7][x] = '#a07840';
+    for (let x = 3; x < 13; x++) px[8][x] = '#907030';
+    px[9][4] = '#907030'; px[9][5] = '#907030'; px[9][10] = '#907030'; px[9][11] = '#907030';
+    px[10][4] = '#907030'; px[10][5] = '#907030'; px[10][10] = '#907030'; px[10][11] = '#907030';
     return px;
   };
 
   const signpost = (): Color[][] => {
     const px: Color[][] = Array.from({ length: H }, () => Array(W).fill(null));
-    px[7][7] = '#5a3e1b'; px[8][7] = '#5a3e1b'; px[9][7] = '#5a3e1b'; px[10][7] = '#5a3e1b'; px[11][7] = '#5a3e1b';
-    for (let y = 3; y < 7; y++) for (let x = 4; x < 12; x++) px[y][x] = '#f0c040';
-    px[4][5] = '#6d4c2a'; px[4][9] = '#6d4c2a';
+    px[7][7] = '#a07840'; px[8][7] = '#a07840'; px[9][7] = '#a07840'; px[10][7] = '#a07840'; px[11][7] = '#a07840';
+    for (let y = 3; y < 7; y++) for (let x = 4; x < 12; x++) px[y][x] = '#ffd93d';
+    px[4][5] = '#a07840'; px[4][9] = '#a07840';
     return px;
   };
 
@@ -303,7 +303,7 @@ function uiTiles(): Color[][][] {
     ];
     for (let y = 0; y < pattern.length; y++) {
       for (let x = 0; x < pattern[y].length; x++) {
-        if (pattern[y][x] === 'x') px[y + 2][x + 2] = '#e74c3c';
+        if (pattern[y][x] === 'x') px[y + 2][x + 2] = '#ff6b6b';
       }
     }
     return px;
