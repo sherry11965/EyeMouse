@@ -32,7 +32,7 @@ jobs:
         run: go vet ./...
 
       - name: Build server
-        run: go build ./cmd
+        run: go build -o "$RUNNER_TEMP/atown-server-check" ./cmd
 
       - name: Build Linux executables
         run: |
