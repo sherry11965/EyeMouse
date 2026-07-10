@@ -1,4 +1,5 @@
-import type { WorldMap, Region, Tile, Building, MapObject, Interactable, WorldTime, Vec2 } from '../map/types';
+import type { WorldMap, Region, Tile, Building, MapObject, Interactable, Vec2 } from '../map/types';
+import type { WorldTime } from '../core/types';
 import { TERRAIN_COLORS } from '../map/types';
 import { getBuildingAt } from '../map/buildings';
 import { getObjectAt } from '../map/objects';
