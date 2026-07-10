@@ -32,6 +32,3 @@ Open the URL shown, then press **Esc** to enter your API key & endpoint (OpenAI-
 - Q — Quest log
 - M — Travel to a region
 - Esc — Pause / Settings
-
-## License
-MIT.
