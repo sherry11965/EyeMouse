@@ -1,4 +1,4 @@
-import type { LLMConfig, RegionId, Vec2, WorldTime } from '../core/types';
+import type { RegionId, WorldTime } from '../core/types';
 
 export interface HUDState {
   time: WorldTime;
@@ -15,15 +15,23 @@ export function formatTokens(n: number): string {
   return `${n}`;
 }
 
+const 季节标签: Record<WorldTime['season'], string> = {
+  spring: '春', summer: '夏', autumn: '秋', winter: '冬'
+};
+
+const 天气标签: Record<WorldTime['weather'], string> = {
+  sunny: '晴', cloudy: '多云', rain: '雨', storm: '暴风雨', snow: '雪', fog: '雾'
+};
+
 export function renderHUD(root: HTMLElement, s: HUDState) {
   const h = Math.floor(s.time.minutes / 60);
   const m = Math.floor(s.time.minutes % 60);
   const hh = String(h).padStart(2, '0');
   const mm = String(m).padStart(2, '0');
   root.innerHTML = `
-    <div class="hud-pill"><span class="label">Day</span>${s.time.day} · ${s.time.season}</div>
-    <div class="hud-pill"><span class="label">${hh}:${mm}</span>${regionName(s.region)} · ${s.time.weather}</div>
-    <div class="hud-pill"><span class="label">Model</span>${s.apiConfigured ? s.model : 'No Key'} · ${formatTokens(s.tokenUsed)}/${formatTokens(s.tokenBudget)}</div>
+    <div class="hud-pill"><span class="label">第</span>${s.time.day} 天 · ${季节标签[s.time.season]}</div>
+    <div class="hud-pill"><span class="label">${hh}:${mm}</span>${区域名(s.region)} · ${天气标签[s.time.weather]}</div>
+    <div class="hud-pill"><span class="label">模型</span>${s.apiConfigured ? s.model : '未配置'} · ${formatTokens(s.tokenUsed)}/${formatTokens(s.tokenBudget)}</div>
   `;
   if (s.interactionHint) {
     const t = document.createElement('div');
@@ -37,9 +45,9 @@ export function renderHUD(root: HTMLElement, s: HUDState) {
   }
 }
 
-function regionName(r: RegionId): string {
+function 区域名(r: RegionId): string {
   return ({
-    plaza: 'Plaza', residential: 'Homes', shops: 'Shops', farm: 'Farm', forest: 'Forest', seaside: 'Seaside'
+    plaza: '中央广场', residential: '居民区', shops: '商业街', farm: '农场', forest: '森林', seaside: '海滨'
   } as Record<RegionId, string>)[r];
 }
 

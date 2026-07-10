@@ -1,5 +1,5 @@
-import { DEFAULT_CONFIG } from '../core/config';
 import type { LLMConfig } from '../core/types';
+import { DEFAULT_CONFIG } from '../core/config';
 
 export function ensureConfigModal(onSave: (cfg: LLMConfig) => void) {
   const root = document.getElementById('modal-root')!;
@@ -13,27 +13,27 @@ export function ensureConfigModal(onSave: (cfg: LLMConfig) => void) {
   div.className = 'modal';
   div.dataset.config = '1';
   div.innerHTML = `
-    <h2>Connect your LLM</h2>
-    <p>Enter any OpenAI-compatible endpoint + key. Stored only in your browser (localStorage).</p>
+    <h2>连接你的大模型</h2>
+    <p>输入任意 OpenAI 兼容的接口地址（Endpoint）和密钥（Key）。仅保存在你浏览器的 localStorage 中，不会上传到任何第三方。</p>
     <div class="field">
-      <label>Endpoint</label>
+      <label>接口地址 (Endpoint)</label>
       <input id="cfg-endpoint" type="text" placeholder="https://api.openai.com/v1/chat/completions" />
     </div>
     <div class="field">
-      <label>API Key</label>
+      <label>密钥 (API Key)</label>
       <input id="cfg-key" type="password" placeholder="sk-..." />
     </div>
     <div class="field">
-      <label>Model</label>
+      <label>模型 (Model)</label>
       <input id="cfg-model" type="text" placeholder="gpt-4o-mini" />
     </div>
     <div class="field">
-      <label>Daily token budget</label>
+      <label>每日 Token 上限</label>
       <input id="cfg-budget" type="number" value="200000" min="10000" />
     </div>
     <div class="row">
-      <button class="ghost" id="cfg-cancel">Cancel</button>
-      <button id="cfg-save">Save</button>
+      <button class="ghost" id="cfg-cancel">取消</button>
+      <button id="cfg-save">保存</button>
     </div>
   `;
   root.appendChild(div);

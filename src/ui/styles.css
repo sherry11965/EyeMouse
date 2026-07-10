@@ -17,7 +17,7 @@ html, body, #app {
   width: 100%; height: 100%;
   background: var(--bg);
   color: var(--fg);
-  font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+  font-family: ui-monospace, "JetBrains Mono", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", Menlo, Consolas, monospace;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   overflow: hidden;

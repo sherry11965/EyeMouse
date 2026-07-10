@@ -61,22 +61,22 @@ class ResidentAgent {
       .filter(o => o.state.region === this.state.region && o !== this)
       .map(o => ({ id: o.state.id, name: getResident(o.state.id)?.name ?? o.state.id, affinity: this.state.relationships[o.state.id]?.affinity ?? 0 }));
     const region = getRegion(this.state.region);
-    const valid = region.interactables.map(i => i.id);
+    const valid = region.interactables.map(i => `${i.id}（${i.label}）`);
     const response = await callLLM([
       {
         role: 'system',
-        content: `You are ${persona.name}, the ${persona.occupation} of a pixel town. Personality: ${persona.personality}. Style: ${persona.speechStyle}.
-Pick ONE next action. Respond STRICT JSON:
-{"intent":"GO_TO|TALK|WORK|REST|INTERACT_OBJECT|IDLE","target":{"type":"agent|object","id":"..."},"speech":"optional short line","thought":"inner monologue","memory_to_store":"optional note"}
-Omit target if not needed. speech only if talking.`
+        content:           `你是像素小镇的${persona.name}（${persona.occupation}）。性格：${persona.personality}。说话风格：${persona.speechStyle}。
+请选择下一步动作。**仅返回严格的 JSON**，格式：
+{"intent":"GO_TO|TALK|WORK|REST|INTERACT_OBJECT|IDLE","target":{"type":"agent|object","id":"..."},"speech":"可选，简短对话","thought":"内心独白","memory_to_store":"可选，简短备注"}
+若不需要目标可不填 target；不开口时省略 speech。所有内容用中文。`
       },
       {
         role: 'user',
-        content: `State: region=${this.state.region}, energy=${this.state.energy}, mood=${this.state.mood}, time=${timeLabel(time)}, weather=${time.weather}, day=${time.day}.
-Recent memory: ${shortTermSnapshot(this.state) || 'none'}.
-Visible: ${visible.length ? visible.map(v => `${v.name} (aff=${v.affinity.toFixed(2)})`).join(', ') : 'none'}.
-Valid object ids in region: ${valid.join(', ')}.
-Pick next action.`
+        content: `当前状态：位置=${this.state.region}，体力=${this.state.energy}，心情=${this.state.mood}，时间=${timeLabel(time)}，天气=${time.weather}，天数=${time.day}。
+近期记忆：${shortTermSnapshot(this.state) || '无'}。
+可见的人：${visible.length ? visible.map(v => `${v.name}（好感=${v.affinity.toFixed(2)}）`).join('、') : '无'}。
+本区域可交互对象：${valid.join('、')}。
+请选择下一步动作。`
       }
     ], { json: true, temperature: 0.9 });
     const decision: Decision = safeParse(response);
@@ -176,17 +176,17 @@ class Game {
     const div = document.createElement('div');
     div.className = 'modal';
     div.innerHTML = `
-      <h2>Travel to...</h2>
-      <p>Pick a region.</p>
+      <h2>前往...</h2>
+      <p>选择一个区域。</p>
       <div id="travel-list"></div>
-      <div class="row"><button class="ghost" id="travel-cancel">Cancel</button></div>
+      <div class="row"><button class="ghost" id="travel-cancel">取消</button></div>
     `;
     root.appendChild(div);
     const list = div.querySelector('#travel-list')!;
     for (const id of REGIONS[this.player.region].paths.concat([this.player.region])) {
       const r = REGIONS[id];
       const btn = document.createElement('button');
-      btn.textContent = r.name + (id === this.player.region ? ' (current)' : '');
+      btn.textContent = r.name + (id === this.player.region ? '（当前）' : '');
       btn.style.margin = '4px';
       btn.style.display = 'block';
       btn.addEventListener('click', () => {
@@ -206,8 +206,8 @@ class Game {
     const div = document.createElement('div');
     div.className = 'modal';
     div.innerHTML = `
-      <h2>Settings</h2>
-      <div class="row"><button class="ghost" id="cfg">API Key</button><button class="ghost" id="resume">Resume</button></div>
+      <h2>设置</h2>
+      <div class="row"><button class="ghost" id="cfg">API Key 设置</button><button class="ghost" id="resume">继续游戏</button></div>
     `;
     root.appendChild(div);
     div.querySelector('#cfg')!.addEventListener('click', () => { div.remove(); ensureConfigModal((c) => { this.hasKey = !!c.apiKey; }); });
@@ -223,7 +223,7 @@ class Game {
       if (d < 1.6 && d < bestD) { bestD = d; nearest = a; }
     }
     if (nearest) {
-      nearest.speech = `Hey there! Glad you stopped by.`;
+      nearest.speech = `嘿，欢迎来到小镇！`;
       nearest.speechUntil = performance.now() + 5000;
       const persona = getResident(nearest.state.id);
       const interaction: typeof RECENT_INTERACTIONS[number] = { ts: Date.now(), a: this.player.region === nearest.state.region ? 'player' : 'remote', b: nearest.state.id };
@@ -299,7 +299,7 @@ class Game {
       model: loadConfig().model,
       tokenUsed: usage.promptTokens + usage.completionTokens,
       tokenBudget: loadConfig().dailyTokenBudget,
-      interactionHint: this.hasKey ? 'WASD move · Space/E talk · M travel · Esc settings' : 'Open settings (Esc) to add an API key'
+      interactionHint: this.hasKey ? 'WASD 移动 · 空格/E 对话 · M 出行 · Esc 设置' : '按 Esc 打开设置，填写 API Key'
     });
 
     const dialogueRoot = document.getElementById('dialogue')!;
@@ -311,7 +311,7 @@ class Game {
         break;
       }
     }
-    renderDialogue(dialogueRoot, line, line ? 'Press M to move on' : undefined);
+    renderDialogue(dialogueRoot, line, line ? '按 M 继续旅行' : undefined);
   }
 
   save() {

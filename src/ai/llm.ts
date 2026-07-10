@@ -93,33 +93,34 @@ export function buildDecisionPrompt(
   visibleOthers: Array<{ id: string; name: string; affinity: number }>,
   validActions: string[]
 ): string {
-  return `You are ${persona.name}, the ${persona.occupation} of an AI pixel town.
+  return `你是像素小镇的 ${persona.name}（${persona.occupation}）。
 
-Personality: ${persona.personality}
-Goals: ${persona.goals.join('; ')}
-Speech style: ${persona.speechStyle}
+- 性格：${persona.personality}
+- 目标：${persona.goals.join('；')}
+- 说话风格：${persona.speechStyle}
 
-Current state:
-- Region: ${self.region}
-- Energy: ${self.energy}/100, Mood: ${self.mood}/100
-- World: day ${time.day}, ${timeLabel(time)}, ${time.weather}
+当前状态：
+- 所在区域：${self.region}
+- 体力 ${self.energy}/100；心情 ${self.mood}/100
+- 世界：第 ${time.day} 天，${timeLabel(time)}，${time.weather}
 
-Visible people: ${visibleOthers.length ? visibleOthers.map(o => `${o.name}(aff=${o.affinity.toFixed(2)})`).join(', ') : 'none'}
+可见的人：${visibleOthers.length ? visibleOthers.map(o => `${o.name}（好感=${o.affinity.toFixed(2)}）`).join('、') : '无'}
 
-Recent memories (most recent last):
-${  self.shortTerm.slice(-8).map((m: { kind: string; text: string }) => `-[${m.kind}] ${m.text}`).join('\n')}
+近期记忆（由近到远）：
+${self.shortTerm.slice(-8).map((m: { kind: string; text: string }) => `- [${m.kind}] ${m.text}`).join('\n')}
 
-Choose exactly ONE next action. Respond with STRICT JSON matching this schema:
+请只选择 1 个下一步动作，严格按以下 JSON Schema 输出：
 ${DECISION_SCHEMA}
 
-CONSTRAINTS:
-- intent must be one of the listed enums
-- target.id MUST reference an entity from "Visible people" OR an object in the current region (use the id from valid options)
-- speech is what you say out loud (1-2 sentences, in your speech style). Omit if not talking.
-- thought is your brief inner monologue (1 sentence)
-- memory_to_store: include only if something noteworthy happened (max 1 short sentence)
+约束：
+- intent 必须是上面列出的枚举之一
+- target.id 必须是"可见的人"或本区域可交互对象中的一个
+- speech：仅在说话时给出，1-2 句，用你的说话风格
+- thought：1 句内心独白
+- memory_to_store：仅在值得记住时给出，1 句简短
+- 所有内容必须用中文
 
-Valid object/interactable IDs in your region: ${validActions.join(', ')}`;
+本区域可用对象 ID：${validActions.join('、')}`;
 }
 
 function timeLabel(t: WorldTime): string {
@@ -158,11 +159,11 @@ export async function generateDialogue(
   const raw = await callLLM([
     {
       role: 'system',
-      content: `You are ${persona.name} (${persona.occupation}). Style: ${persona.speechStyle}. Reply with one short line (max 18 words). No narration, no quotes.`
+      content: `你是 ${persona.name}（${persona.occupation}）。说话风格：${persona.speechStyle}。请用中文回 1 句简短对话（不超过 20 字），不要加旁白或引号。`
     },
     {
       role: 'user',
-      content: `Talking with ${ctx.otherName}. Topic: ${ctx.topic}. Your mood: ${ctx.mood}/100. Reply:`
+      content: `正在与 ${ctx.otherName} 聊天。话题：${ctx.topic}。你的心情：${ctx.mood}/100。请回复：`
     }
   ], { temperature: 0.9 });
   return raw.trim().replace(/^["']|["']$/g, '').slice(0, 200);

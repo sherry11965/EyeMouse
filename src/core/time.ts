@@ -26,7 +26,7 @@ export function isDaytime(t: WorldTime): boolean {
 
 export function weatherLabel(t: WorldTime): string {
   const map: Record<WorldTime['weather'], string> = {
-    sunny: 'Sunny', cloudy: 'Cloudy', rain: 'Rain', storm: 'Storm', snow: 'Snow', fog: 'Fog'
+    sunny: '晴', cloudy: '多云', rain: '雨', storm: '暴风雨', snow: '雪', fog: '雾'
   };
   return map[t.weather];
 }
