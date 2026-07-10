@@ -57,7 +57,7 @@ export function drawTerrainTile(
   screenY: number
 ) {
   ensureAtlas();
-  const idx = 24 + tileIdx;
+  const idx = 96 + tileIdx;
   const sx = (idx % COLS) * TILE;
   const sy = Math.floor(idx / COLS) * TILE;
   ctx.drawImage(atlasCanvas!, sx, sy, TILE, TILE, Math.round(screenX), Math.round(screenY), TILE, TILE);
@@ -70,7 +70,7 @@ export function drawBuildingTile(
   screenY: number
 ) {
   ensureAtlas();
-  const idx = 30 + tileIdx;
+  const idx = 102 + tileIdx;
   const sx = (idx % COLS) * TILE;
   const sy = Math.floor(idx / COLS) * TILE;
   ctx.drawImage(atlasCanvas!, sx, sy, TILE, TILE, Math.round(screenX), Math.round(screenY), TILE, TILE);
@@ -83,7 +83,7 @@ export function drawObjectTile(
   screenY: number
 ) {
   ensureAtlas();
-  const idx = 35 + tileIdx;
+  const idx = 107 + tileIdx;
   const sx = (idx % COLS) * TILE;
   const sy = Math.floor(idx / COLS) * TILE;
   ctx.drawImage(atlasCanvas!, sx, sy, TILE, TILE, Math.round(screenX), Math.round(screenY), TILE, TILE);

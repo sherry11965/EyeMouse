@@ -1,29 +1,18 @@
-import { REGIONS } from '../world/regions';
-import type { RegionId, Vec2, WorldTime } from '../core/types';
+import type { GeneratedWorld, RegionTerrainType, WorldTime } from '../core/types';
+import { getAllRegions, getWorldBounds } from '../world/worldState';
 import { drawTerrainTile, drawBuildingTile, drawObjectTile } from './sprite';
 
 const TILE = 16;
 
-const TERRAIN = {
-  grass: 0, dirt: 1, water: 2, stone: 3, sand: 4, darkGrass: 5
-} as const;
-
-const BUILDING = {
-  wall: 0, roof: 1, door: 2, window: 3, woodFloor: 4
-} as const;
-
-const OBJECT = {
-  tree: 0, flower: 1, fountain: 2, bench: 3, signpost: 4
-} as const;
+const T = { grass: 0, dirt: 1, water: 2, stone: 3, sand: 4, darkGrass: 5 } as const;
+const B = { wall: 0, roof: 1, door: 2, window: 3, woodFloor: 4 } as const;
+const O = { tree: 0, flower: 1, fountain: 2, bench: 3, signpost: 4 } as const;
 
 export function drawWorld(
   ctx: CanvasRenderingContext2D,
-  regionId: RegionId,
-  camera: Vec2,
+  camera: { x: number; y: number },
   zoom: number,
-  time: WorldTime,
-  worldW: number,
-  worldH: number
+  time: WorldTime
 ) {
   const screenW = ctx.canvas.width;
   const screenH = ctx.canvas.height;
@@ -35,106 +24,211 @@ export function drawWorld(
     (screenH / zoom) / 2 - camera.y * TILE
   );
 
-  drawGround(ctx, regionId, worldW, worldH);
-  drawRegionDecor(ctx, regionId, worldW, worldH);
-  drawInteractables(ctx, regionId);
-  drawTimeOverlay(ctx, time, worldW, worldH);
+  const bounds = getWorldBounds();
+
+  // 全世界底色（道路/空隙）
+  for (let y = 0; y < bounds.h; y++) {
+    for (let x = 0; x < bounds.w; x++) {
+      drawTerrainTile(ctx, T.stone, x * TILE, y * TILE);
+    }
+  }
+
+  const regions = getAllRegions();
+
+  // 各区域地面
+  for (const r of regions) {
+    const ox = r.worldOffset.x, oy = r.worldOffset.y;
+    const base = terrainBase(r.terrainType);
+    const alt = terrainAlt(r.terrainType);
+    for (let ty = 0; ty < r.size.h; ty++) {
+      for (let tx = 0; tx < r.size.w; tx++) {
+        drawTerrainTile(ctx, (tx + ty) % 2 === 0 ? base : alt,
+          (ox + tx) * TILE, (oy + ty) * TILE);
+      }
+    }
+  }
+
+  // 各区域装饰
+  for (const r of regions) {
+    drawRegionDecor(ctx, r.terrainType, r.worldOffset.x, r.worldOffset.y, r.size.w, r.size.h);
+    // 区域内可交互对象（路牌标记）
+    for (const obj of r.interactables) {
+      if (obj.type !== 'home' && obj.type !== 'shop' && obj.type !== 'dock') {
+        drawObjectTile(ctx, O.signpost,
+          (r.worldOffset.x + obj.x) * TILE,
+          (r.worldOffset.y + obj.y) * TILE);
+      }
+    }
+  }
+
+  drawTimeOverlay(ctx, time);
   ctx.restore();
 }
 
-function drawGround(ctx: CanvasRenderingContext2D, regionId: RegionId, w: number, h: number) {
-  const base = regionBaseTerrain(regionId);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const t = (x + y) % 2 === 0 ? base : TERRAIN.grass;
-      drawTerrainTile(ctx, t, x * TILE, y * TILE);
-    }
+function terrainBase(t: RegionTerrainType): number {
+  switch (t) {
+    case 'plaza':    return T.stone;
+    case 'market':   return T.stone;
+    case 'village':  return T.grass;
+    case 'farm':     return T.dirt;
+    case 'forest':   return T.darkGrass;
+    case 'seaside':  return T.sand;
+    case 'ruins':    return T.stone;
+    case 'mountain': return T.stone;
+    case 'desert':   return T.sand;
+    default:         return T.grass;
   }
 }
 
-function regionBaseTerrain(id: RegionId): number {
-  switch (id) {
-    case 'plaza': return TERRAIN.stone;
-    case 'residential': return TERRAIN.grass;
-    case 'shops': return TERRAIN.dirt;
-    case 'farm': return TERRAIN.dirt;
-    case 'forest': return TERRAIN.darkGrass;
-    case 'seaside': return TERRAIN.sand;
+function terrainAlt(t: RegionTerrainType): number {
+  switch (t) {
+    case 'plaza':    return T.stone;
+    case 'market':   return T.dirt;
+    case 'village':  return T.grass;
+    case 'farm':     return T.grass;
+    case 'forest':   return T.darkGrass;
+    case 'seaside':  return T.sand;
+    case 'ruins':    return T.dirt;
+    case 'mountain': return T.dirt;
+    case 'desert':   return T.dirt;
+    default:         return T.grass;
   }
 }
 
-function drawRegionDecor(ctx: CanvasRenderingContext2D, regionId: RegionId, w: number, h: number) {
-  if (regionId === 'seaside') {
-    for (let x = 18; x < w; x++) {
-      for (let y = 6; y < h - 2; y++) {
-        drawTerrainTile(ctx, TERRAIN.water, x * TILE, y * TILE);
+function drawRegionDecor(
+  ctx: CanvasRenderingContext2D,
+  type: RegionTerrainType,
+  ox: number, oy: number, w: number, h: number
+) {
+  const px = (lx: number, ly: number): [number, number] =>
+    [(ox + lx) * TILE, (oy + ly) * TILE];
+
+  if (type === 'forest') {
+    const trees = [
+      [4,3],[8,6],[12,2],[16,8],[20,4],[24,10],[28,6],[32,3],[36,8],[40,4],
+      [2,14],[6,18],[10,22],[14,16],[18,24],[22,28],[26,20],[30,30],[34,24],[38,28],
+      [5,10],[13,20],[21,14],[29,18],[37,16],[9,28],[17,18],[25,24],[33,30],[41,26],
+    ];
+    for (const [tx, ty] of trees) if (tx < w && ty < h)
+      drawObjectTile(ctx, O.tree, ...px(tx, ty));
+    for (const [fx, fy] of [[3,6],[11,14],[19,22],[27,10],[35,20]])
+      if (fx < w && fy < h) drawObjectTile(ctx, O.flower, ...px(fx, fy));
+  }
+
+  if (type === 'farm') {
+    for (let fx = 8; fx <= Math.min(38, w - 4); fx += 2)
+      for (let fy = 6; fy <= Math.min(16, h - 4); fy += 2)
+        drawTerrainTile(ctx, T.dirt, (ox + fx) * TILE, (oy + fy) * TILE);
+    for (let fx = 10; fx <= Math.min(36, w - 4); fx += 2)
+      for (let fy = 18; fy <= Math.min(28, h - 4); fy += 2)
+        drawTerrainTile(ctx, T.dirt, (ox + fx) * TILE, (oy + fy) * TILE);
+    for (const [fx, fy] of [[11,9],[29,9],[15,23],[31,25]])
+      if (fx < w && fy < h) drawObjectTile(ctx, O.flower, ...px(fx, fy));
+  }
+
+  if (type === 'village') {
+    for (const [hx, hy] of [[4,4],[12,4],[22,4],[32,4],[6,22],[16,22],[28,22]])
+      if (hx + 2 < w && hy + 2 < h) {
+        drawBuildingTile(ctx, B.wall, ...px(hx - 1, hy - 1));
+        drawBuildingTile(ctx, B.roof, ...px(hx - 1, hy - 3));
+        drawBuildingTile(ctx, B.door, ...px(hx, hy));
       }
+    for (const [tx, ty] of [[18,10],[22,10],[20,14],[24,12]])
+      if (tx < w && ty < h) drawObjectTile(ctx, O.tree, ...px(tx, ty));
+    drawObjectTile(ctx, O.bench, ...(px(20, 12)));
+  }
+
+  if (type === 'seaside') {
+    for (let sx = Math.max(0, w - 18); sx < w; sx++)
+      for (let sy = 4; sy < h; sy++)
+        drawTerrainTile(ctx, T.water, (ox + sx) * TILE, (oy + sy) * TILE);
+    for (let sx = Math.max(0, w - 22); sx < w - 18; sx++)
+      for (let sy = 8; sy < h; sy++)
+        drawTerrainTile(ctx, T.sand, (ox + sx) * TILE, (oy + sy) * TILE);
+    const lhx = w - 2, lhy = 2;
+    if (lhx < w && lhy < h) {
+      drawBuildingTile(ctx, B.wall, ...px(lhx, lhy));
+      drawBuildingTile(ctx, B.roof, ...px(lhx, lhy - 2));
     }
-  } else if (regionId === 'forest') {
-    for (let i = 0; i < 20; i++) {
-      const tx = (i * 11 + i * i * 3) % w;
-      const ty = (i * 17 + i * 5) % h;
-      drawObjectTile(ctx, OBJECT.tree, tx * TILE, ty * TILE);
-    }
-  } else if (regionId === 'farm') {
-    for (let x = 8; x <= 18; x += 2) {
-      for (let y = 6; y <= 14; y += 2) {
-        drawTerrainTile(ctx, TERRAIN.dirt, x * TILE, y * TILE);
+  }
+
+  if (type === 'plaza') {
+    const cx = Math.floor(w / 2), cy = Math.floor(h / 2);
+    drawObjectTile(ctx, O.fountain, ...px(cx, cy));
+    for (const [bx, by] of [[cx-10,cy-8],[cx-2,cy-8],[cx+8,cy+4],[cx-10,cy+8]])
+      if (bx >= 0 && by >= 0 && bx < w && by < h)
+        drawObjectTile(ctx, O.bench, ...px(bx, by));
+    for (const [fx, fy] of [[cx-8,cy-2],[cx+4,cy-6],[cx+8,cy+2],[cx-4,cy+6]])
+      if (fx >= 0 && fy >= 0 && fx < w && fy < h)
+        drawObjectTile(ctx, O.flower, ...px(fx, fy));
+  }
+
+  if (type === 'market') {
+    for (const [sx, sy] of [[4,4],[12,4],[22,4],[32,4],[8,18],[20,20],[34,24]])
+      if (sx + 2 < w && sy + 2 < h) {
+        drawBuildingTile(ctx, B.wall, ...px(sx, sy));
+        drawBuildingTile(ctx, B.roof, ...px(sx, sy - 2));
+        drawBuildingTile(ctx, B.window, ...px(sx + 1, sy - 1));
       }
-    }
-    drawObjectTile(ctx, OBJECT.flower, 11 * TILE, 9 * TILE);
-    drawObjectTile(ctx, OBJECT.flower, 15 * TILE, 11 * TILE);
-  } else if (regionId === 'plaza') {
-    drawObjectTile(ctx, OBJECT.fountain, 14 * TILE, 9 * TILE);
-    drawObjectTile(ctx, OBJECT.bench, 10 * TILE, 6 * TILE);
-    drawObjectTile(ctx, OBJECT.bench, 18 * TILE, 6 * TILE);
-    drawObjectTile(ctx, OBJECT.signpost, 4 * TILE, 4 * TILE);
-  } else if (regionId === 'residential') {
-    for (const h of REGIONS.residential.interactables.filter(i => i.type === 'home')) {
-      drawBuildingTile(ctx, BUILDING.wall, h.x * TILE - 8, h.y * TILE - 12);
-      drawBuildingTile(ctx, BUILDING.roof, h.x * TILE - 8, h.y * TILE - 28);
-      drawBuildingTile(ctx, BUILDING.door, h.x * TILE, h.y * TILE);
-    }
-  } else if (regionId === 'shops') {
-    for (const s of REGIONS.shops.interactables) {
-      drawBuildingTile(ctx, BUILDING.wall, s.x * TILE - 4, s.y * TILE - 8);
-      drawBuildingTile(ctx, BUILDING.roof, s.x * TILE - 4, s.y * TILE - 24);
-      drawBuildingTile(ctx, BUILDING.window, s.x * TILE, s.y * TILE - 4);
-    }
+    for (const [fx, fy] of [[10,12],[20,14],[30,12]])
+      if (fx < w && fy < h) drawObjectTile(ctx, O.flower, ...px(fx, fy));
+  }
+
+  if (type === 'ruins') {
+    for (const [rx, ry] of [[6,8],[14,12],[24,6],[32,16],[38,8],[10,22],[28,24]])
+      if (rx < w && ry < h) drawBuildingTile(ctx, B.wall, ...px(rx, ry));
+    for (const [tx, ty] of [[4,10],[18,8],[36,20],[12,26],[30,28]])
+      if (tx < w && ty < h) drawObjectTile(ctx, O.tree, ...px(tx, ty));
+  }
+
+  if (type === 'mountain') {
+    for (let y = 0; y < Math.min(8, h); y++)
+      for (let x = 0; x < w; x++)
+        drawTerrainTile(ctx, T.stone, (ox + x) * TILE, (oy + y) * TILE);
+    for (const [tx, ty] of [[6,10],[14,12],[22,10],[30,14],[38,10]])
+      if (tx < w && ty < h) drawObjectTile(ctx, O.tree, ...px(tx, ty));
+  }
+
+  if (type === 'desert') {
+    for (const [cx2, cy2] of [[8,6],[20,14],[34,8],[12,22],[28,18],[40,24]])
+      if (cx2 < w && cy2 < h) {
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dx = -1; dx <= 1; dx++)
+            if (cx2 + dx >= 0 && cy2 + dy >= 0 && cx2 + dx < w && cy2 + dy < h)
+              drawTerrainTile(ctx, T.stone, (ox + cx2 + dx) * TILE, (oy + cy2 + dy) * TILE);
+      }
   }
 }
 
-function drawInteractables(ctx: CanvasRenderingContext2D, regionId: RegionId) {
-  for (const obj of REGIONS[regionId].interactables) {
-    if (['home', 'shop', 'field', 'dock'].includes(obj.type)) continue;
-    drawObjectTile(ctx, OBJECT.signpost, obj.x * TILE, obj.y * TILE);
-  }
-}
-
-function drawTimeOverlay(ctx: CanvasRenderingContext2D, t: WorldTime, w: number, h: number) {
-  const pw = w * TILE, ph = h * TILE;
+function drawTimeOverlay(ctx: CanvasRenderingContext2D, t: WorldTime) {
+  const bounds = getWorldBounds();
+  const pw = bounds.w * TILE, ph = bounds.h * TILE;
   const alpha = nightAlpha(t);
   if (alpha > 0) {
-    ctx.fillStyle = `rgba(25, 25, 80, ${alpha})`;
+    ctx.fillStyle = `rgba(10,15,40,${alpha})`;
     ctx.fillRect(0, 0, pw, ph);
   }
   if (t.weather === 'rain' || t.weather === 'storm') {
     ctx.fillStyle = 'rgba(125,211,252,0.5)';
     const seed = Math.floor(t.minutes * 13);
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 80; i++)
       ctx.fillRect(((i * 53 + seed) % pw), ((i * 97 + seed * 3) % ph), 1, 3);
-    }
   }
   if (t.weather === 'fog') {
-    ctx.fillStyle = 'rgba(226,232,240,0.15)';
-    ctx.fillRect(0, 0, pw, ph);
+    ctx.fillStyle = 'rgba(226,232,240,0.18)'; ctx.fillRect(0, 0, pw, ph);
+  }
+  if (t.weather === 'snow') {
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    const seed = Math.floor(t.minutes * 7);
+    for (let i = 0; i < 60; i++)
+      ctx.fillRect(((i * 71 + seed) % pw), ((i * 113 + seed * 2) % ph), 2, 2);
   }
 }
 
 function nightAlpha(t: WorldTime): number {
   const m = t.minutes;
-  if (m < 6 * 60 || m > 19.5 * 60) return 0.1;
-  if (m < 7 * 60) return 0.1 * (1 - (m - 360) / 60);
-  if (m > 18.5 * 60) return 0.1 * ((m - 1110) / 60);
+  if (m < 6 * 60 || m > 19.5 * 60) return 0.5;
+  if (m < 7 * 60) return 0.5 * (1 - (m - 360) / 60);
+  if (m > 18.5 * 60) return 0.5 * ((m - 1110) / 60);
   return 0;
 }

@@ -5,17 +5,17 @@
 }
 
 :root {
-  --bg: #87ceeb;
-  --panel: #fff8e7;
-  --panel2: #f0e6c8;
-  --fg: #2d3436;
-  --muted: #636e72;
-  --accent: #e17055;
-  --accent2: #d63031;
-  --accent3: #0984e3;
-  --good: #00b894;
-  --bad: #d63031;
-  --border: #b2bec3;
+  --bg: #1a1d2e;
+  --panel: #21253a;
+  --panel2: #181c2e;
+  --fg: #e0e0e0;
+  --muted: #7a7fa8;
+  --accent: #f0c050;
+  --accent2: #ff6b8a;
+  --accent3: #64dfdf;
+  --good: #92cc41;
+  --bad: #e74c3c;
+  --border: #3a3f5c;
   --px: 4px;
 }
 
@@ -25,13 +25,47 @@ html, body, #app {
   width: 100%; height: 100%;
   background: var(--bg);
   color: var(--fg);
-  font-family: 'Zpix', 'Press Start 2P', monospace;
+  font-family: 'Zpix', monospace;
   font-size: 12px;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   overflow: hidden;
   user-select: none;
   -webkit-font-smoothing: none;
+}
+
+/* NES.css overrides — keep Zpix font everywhere */
+.nes-container,
+.nes-btn,
+.nes-input,
+.nes-text,
+.nes-field label,
+.nes-balloon,
+.title {
+  font-family: 'Zpix', monospace !important;
+  font-size: 12px !important;
+}
+
+/* NES.css dark theme */
+.nes-container.is-dark {
+  background: var(--panel) !important;
+  border-color: var(--border) !important;
+  color: var(--fg) !important;
+}
+
+.nes-input.is-dark {
+  background: var(--panel2) !important;
+  color: var(--fg) !important;
+  border-color: var(--border) !important;
+  font-size: 12px !important;
+}
+
+.nes-input.is-dark:focus {
+  border-color: var(--accent) !important;
+}
+
+.nes-btn {
+  font-size: 11px !important;
 }
 
 #app { position: relative; }
@@ -41,17 +75,17 @@ html, body, #app {
   width: 100vw;
   height: 100vh;
   background: var(--bg);
-  cursor: crosshair;
+  cursor: pointer;
   outline: none;
 }
 
+/* ── HUD ── */
 #hud, #dialogue, #modal-root {
   position: absolute;
   pointer-events: none;
   z-index: 10;
 }
 
-/* ── HUD ── */
 #hud {
   top: 0; left: 0; right: 0;
   display: flex;
@@ -64,50 +98,35 @@ html, body, #app {
 .hud-pill {
   background: var(--panel);
   color: var(--fg);
-  padding: 8px 14px;
+  padding: 6px 12px;
   font-size: 11px;
   line-height: 1;
   white-space: nowrap;
-  position: relative;
-  border: var(--px) solid;
-  border-color: var(--border) var(--border) var(--border) var(--border);
+  border: 2px solid var(--border);
+  image-rendering: pixelated;
+  /* NES-style pixel corner */
   box-shadow:
-    inset calc(var(--px) * -1) calc(var(--px) * -1) 0 0 var(--panel2),
-    inset var(--px) var(--px) 0 0 rgba(255,255,255,0.3);
+    inset -4px -4px 0 0 var(--panel2),
+    inset 4px 4px 0 0 rgba(255,255,255,0.06);
 }
 
-.hud-pill::before {
-  content: '';
-  position: absolute;
-  bottom: calc(var(--px) * -1);
-  right: calc(var(--px) * -1);
-  width: var(--px);
-  height: var(--px);
-  background: var(--bg);
-}
-
-.hud-pill .label {
+.hud-label {
   color: var(--accent);
   margin-right: 6px;
 }
 
-.hud-pill:nth-child(1) { border-left-color: var(--accent); }
-.hud-pill:nth-child(2) { border-left-color: var(--accent3); }
-.hud-pill:nth-child(3) { border-left-color: var(--good); }
-.hud-pill:nth-child(4) { border-left-color: var(--accent2); }
-
 .hud-hint {
   position: absolute;
-  top: 60px;
+  top: 58px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 10px;
   color: var(--muted);
   background: var(--panel);
-  border: var(--px) solid var(--border);
-  padding: 6px 14px;
-  animation: blink 2s step-end infinite;
+  border: 2px solid var(--border);
+  padding: 4px 12px;
   white-space: nowrap;
+  animation: blink 2s step-end infinite;
 }
 
 @keyframes blink {
@@ -115,7 +134,7 @@ html, body, #app {
   50% { opacity: 0.4; }
 }
 
-/* ── Dialogue Box ── */
+/* ── Dialogue ── */
 #dialogue {
   bottom: 20px; left: 20px; right: 20px;
   display: flex; justify-content: center;
@@ -124,19 +143,9 @@ html, body, #app {
 
 .dialogue-box {
   pointer-events: auto;
-  max-width: 680px;
+  max-width: 680px !important;
   width: 100%;
-  background: var(--panel);
-  border: var(--px) solid var(--accent);
-  padding: 16px 20px 14px;
-  font-size: 12px;
-  line-height: 1.8;
-  position: relative;
   animation: slideUp 0.2s step-end;
-  box-shadow:
-    inset calc(var(--px) * -1) calc(var(--px) * -1) 0 0 var(--panel2),
-    inset var(--px) var(--px) 0 0 rgba(255,255,255,0.3),
-    0 8px 0 rgba(0,0,0,0.1);
 }
 
 @keyframes slideUp {
@@ -144,68 +153,45 @@ html, body, #app {
   to   { transform: translateY(0); opacity: 1; }
 }
 
-.dialogue-box::before {
-  content: '';
-  display: block;
-  width: 100%;
-  height: var(--px);
-  background: var(--accent);
-  margin-bottom: 10px;
-  opacity: 0.5;
+.dialogue-speaker {
+  margin-bottom: 8px;
+  font-size: 13px !important;
 }
 
-.dialogue-box::after {
-  content: '';
-  position: absolute;
-  bottom: calc(var(--px) * -1);
-  right: calc(var(--px) * -1);
-  width: var(--px);
-  height: var(--px);
-  background: var(--bg);
-}
-
-.dialogue-box .speaker {
-  color: var(--accent);
-  margin-bottom: 6px;
-  font-size: 13px;
-}
-
-.dialogue-box .text {
-  color: var(--fg);
+.dialogue-text {
   white-space: pre-wrap;
+  line-height: 1.8;
+  margin-bottom: 4px;
 }
 
-.dialogue-box .hint {
-  color: var(--muted);
-  font-size: 10px;
-  margin-top: 10px;
+.dialogue-hint {
+  font-size: 10px !important;
   text-align: right;
+  display: block;
+  margin-top: 8px;
 }
 
 /* ── Modal ── */
 #modal-root {
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.3);
   z-index: 100;
   pointer-events: auto;
 }
 
-.modal {
-  background: var(--panel);
-  border: var(--px) solid var(--accent);
-  padding: 24px 28px;
-  width: min(480px, 92vw);
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 12, 24, 0.85);
+}
+
+.modal-card {
+  width: min(480px, 92vw) !important;
   max-height: 86vh;
   overflow: auto;
-  position: relative;
   animation: modalIn 0.15s step-end;
-  box-shadow:
-    inset calc(var(--px) * -1) calc(var(--px) * -1) 0 0 var(--panel2),
-    inset var(--px) var(--px) 0 0 rgba(255,255,255,0.3),
-    0 12px 0 rgba(0,0,0,0.1);
 }
 
 @keyframes modalIn {
@@ -213,146 +199,31 @@ html, body, #app {
   to   { transform: scale(1); opacity: 1; }
 }
 
-.modal::before {
-  content: '';
-  display: block;
-  width: 100%;
-  height: var(--px);
-  background: var(--accent);
+.modal-desc {
+  margin: 0 0 16px;
+  line-height: 1.8;
+  font-size: 11px !important;
+}
+
+.nes-field {
   margin-bottom: 14px;
 }
 
-.modal::after {
-  content: '';
-  position: absolute;
-  bottom: calc(var(--px) * -1);
-  right: calc(var(--px) * -1);
-  width: var(--px);
-  height: var(--px);
-  background: var(--bg);
-}
-
-.modal h2 {
-  margin: 0 0 6px;
-  font-size: 16px;
-  color: var(--accent);
-}
-
-.modal p {
-  color: var(--muted);
-  font-size: 11px;
-  margin: 0 0 16px;
-  line-height: 1.8;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 12px;
-}
-
-.field label {
-  font-size: 10px;
-  color: var(--muted);
+.nes-field label {
+  display: block;
   margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 10px !important;
 }
 
-.field input,
-.field select {
-  background: var(--panel2);
-  border: var(--px) solid var(--border);
-  color: var(--fg);
-  padding: 10px 12px;
-  font-family: inherit;
-  font-size: 12px;
-  outline: none;
-  box-shadow:
-    inset calc(var(--px) * -1) calc(var(--px) * -1) 0 0 rgba(0,0,0,0.05),
-    inset var(--px) var(--px) 0 0 rgba(255,255,255,0.3);
-}
-
-.field input:focus {
-  border-color: var(--accent);
-}
-
-.row {
+.modal-row {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
   margin-top: 16px;
 }
 
-button {
-  background: var(--accent);
-  color: #fff;
-  border: 0;
-  padding: 10px 18px;
-  font-family: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  position: relative;
-  border: var(--px) solid #c0392b;
-  box-shadow:
-    inset calc(var(--px) * -1) calc(var(--px) * -1) 0 0 #a93226,
-    inset var(--px) var(--px) 0 0 #ff8a80;
-  transition: transform 0.05s;
-}
-
-button:hover {
-  transform: translateY(-1px);
-}
-
-button:active {
-  transform: translateY(1px);
-  box-shadow:
-    inset var(--px) var(--px) 0 0 #a93226,
-    inset calc(var(--px) * -1) calc(var(--px) * -1) 0 0 #ff8a80;
-}
-
-button.ghost {
-  background: var(--panel2);
-  color: var(--fg);
-  border-color: var(--border);
-  box-shadow:
-    inset calc(var(--px) * -1) calc(var(--px) * -1) 0 0 rgba(0,0,0,0.05),
-    inset var(--px) var(--px) 0 0 rgba(255,255,255,0.3);
-}
-
-button.ghost:hover {
-  border-color: var(--muted);
-}
-
-button.danger {
-  background: var(--bad);
-  border-color: #a93226;
-  color: #fff;
-  box-shadow:
-    inset calc(var(--px) * -1) calc(var(--px) * -1) 0 0 #922b21,
-    inset var(--px) var(--px) 0 0 #ff8a80;
-}
-
-/* Travel list */
-#travel-list button {
-  display: block;
-  width: 100%;
-  margin: 4px 0;
-  text-align: left;
-  background: var(--panel2);
-  color: var(--fg);
-  border-color: var(--border);
-  font-size: 12px;
-  padding: 10px 14px;
-  box-shadow:
-    inset calc(var(--px) * -1) calc(var(--px) * -1) 0 0 rgba(0,0,0,0.03),
-    inset var(--px) var(--px) 0 0 rgba(255,255,255,0.3);
-}
-
-#travel-list button:hover {
-  border-color: var(--accent);
-  background: rgba(225,112,85,0.1);
-}
-
-/* CRT Scanlines */
+/* ── CRT Scanlines ── */
 #scanlines {
   position: absolute;
   inset: 0;
@@ -362,12 +233,12 @@ button.danger {
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 0, 0, 0.01) 2px,
-    rgba(0, 0, 0, 0.01) 4px
+    rgba(0, 0, 0, 0.04) 2px,
+    rgba(0, 0, 0, 0.04) 4px
   );
 }
 
-/* Boot Screen */
+/* ── Boot Screen ── */
 #boot {
   position: absolute;
   inset: 0;
@@ -387,7 +258,7 @@ button.danger {
   font-size: 36px;
   color: var(--accent);
   margin-bottom: 14px;
-  text-shadow: 4px 4px 0 rgba(0,0,0,0.2);
+  text-shadow: 4px 4px 0 #8a6a10;
 }
 
 .boot-sub {
@@ -402,7 +273,7 @@ button.danger {
   width: 100%;
   height: 12px;
   background: var(--panel2);
-  border: var(--px) solid var(--border);
+  border: 2px solid var(--border);
   overflow: hidden;
 }
 
@@ -429,81 +300,8 @@ button.danger {
   animation: blink 1.2s step-end infinite;
 }
 
-/* Scrollbar */
+/* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: var(--panel2); }
 ::-webkit-scrollbar-thumb { background: var(--border); border: 2px solid var(--panel2); }
-::-webkit-scrollbar-thumb:hover { background: var(--accent); }
-
-/* Tutorial */
-#tutorial-root {
-  position: absolute;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 1000;
-  cursor: pointer;
-}
-
-.tutorial-box {
-  background: var(--panel);
-  border: var(--px) solid var(--accent);
-  padding: 28px 36px;
-  width: min(420px, 90vw);
-  text-align: center;
-  position: relative;
-  box-shadow:
-    inset calc(var(--px) * -1) calc(var(--px) * -1) 0 0 var(--panel2),
-    inset var(--px) var(--px) 0 0 rgba(255,255,255,0.3),
-    0 12px 0 rgba(0,0,0,0.15);
-  animation: modalIn 0.2s step-end;
-}
-
-.tutorial-step {
-  font-size: 10px;
-  color: var(--muted);
-  margin-bottom: 8px;
-}
-
-.tutorial-title {
-  font-size: 18px;
-  color: var(--accent);
-  margin: 0 0 12px;
-}
-
-.tutorial-text {
-  font-size: 12px;
-  color: var(--fg);
-  line-height: 1.8;
-  margin: 0 0 16px;
-}
-
-.tutorial-hint {
-  font-size: 11px;
-  color: var(--accent3);
-  padding: 8px 12px;
-  background: var(--panel2);
-  border: var(--px) solid var(--border);
-  margin-bottom: 16px;
-  animation: blink 1.5s step-end infinite;
-}
-
-.tutorial-progress {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-}
-
-.tutorial-progress .dot {
-  width: 8px;
-  height: 8px;
-  background: var(--border);
-  border: 2px solid var(--border);
-}
-
-.tutorial-progress .dot.active {
-  background: var(--accent);
-  border-color: var(--accent);
-}
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }

@@ -1,16 +1,8 @@
 export type Vec2 = { x: number; y: number };
-
 export type Direction = 'up' | 'down' | 'left' | 'right';
+export type RegionId = string;  // 改为 string 支持动态生成
 
-export type RegionId = 'plaza' | 'residential' | 'shops' | 'farm' | 'forest' | 'seaside';
-
-export type Intent =
-  | 'GO_TO'
-  | 'TALK'
-  | 'WORK'
-  | 'REST'
-  | 'INTERACT_OBJECT'
-  | 'IDLE';
+export type Intent = 'GO_TO' | 'TALK' | 'WORK' | 'REST' | 'INTERACT_OBJECT' | 'IDLE';
 
 export interface Decision {
   intent: Intent;
@@ -30,6 +22,7 @@ export interface ResidentPersona {
   spriteKey: string;
   home: RegionId;
   workplace: RegionId;
+  backstory?: string;
 }
 
 export interface MemoryEntry {
@@ -71,4 +64,39 @@ export interface WorldTime {
   day: number;
   season: 'spring' | 'summer' | 'autumn' | 'winter';
   weather: 'sunny' | 'cloudy' | 'rain' | 'storm' | 'snow' | 'fog';
+}
+
+// ── AI 生成的世界数据 ──────────────────────────────────────────────
+
+export type RegionTerrainType =
+  | 'village' | 'forest' | 'market' | 'seaside'
+  | 'farm' | 'plaza' | 'ruins' | 'mountain' | 'desert';
+
+export interface GeneratedInteractable {
+  id: string;
+  type: string;
+  x: number;
+  y: number;
+  label: string;
+}
+
+export interface GeneratedRegion {
+  id: string;
+  name: string;
+  terrainType: RegionTerrainType;
+  description: string;
+  worldOffset: Vec2;
+  size: { w: number; h: number };
+  spawn: Vec2;
+  interactables: GeneratedInteractable[];
+}
+
+export interface GeneratedWorld {
+  theme: string;
+  worldName: string;
+  story: string;
+  regions: GeneratedRegion[];
+  personas: ResidentPersona[];
+  events: string[];
+  seed: number;
 }

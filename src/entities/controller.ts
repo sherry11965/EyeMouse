@@ -1,13 +1,10 @@
 import type { Decision, Direction, ResidentPersona, ResidentState, Vec2 } from '../core/types';
 import { aStar } from '../world/pathfind';
-import { REGIONS } from '../world/regions';
+import { getRegion } from '../world/worldState';
 import { clamp, dist2 } from '../core/util';
 
 export interface AgentMove {
-  pos: Vec2;
-  dir: Direction;
-  walking: boolean;
-  done: boolean;
+  pos: Vec2; dir: Direction; walking: boolean; done: boolean;
 }
 
 export function applyDecision(
@@ -16,47 +13,50 @@ export function applyDecision(
   decision: Decision,
   agentsInRegion: Array<{ id: string; pos: Vec2 }>
 ) {
-  const region = REGIONS[self.region];
+  const region = getRegion(self.region);
+  if (!region) return null;
+  const offset = region.worldOffset;
+
   const blocked = (x: number, y: number) =>
     region.interactables.some(i => Math.abs(i.x - x) + Math.abs(i.y - y) === 0);
-  const target = resolveTarget(self, decision, agentsInRegion, region);
-  let path: Vec2[] | null = null;
-  if (target) {
-    path = aStar(self.pos, target, blocked, region.size);
-  }
-  if (!path || path.length <= 1) {
-    if (decision.intent === 'REST') {
-      self.energy = clamp(self.energy + 30, 0, 100);
-      self.mood = clamp(self.mood + 2, 0, 100);
-    } else if (decision.intent === 'WORK') {
-      self.energy = clamp(self.energy - 10, 0, 100);
-      self.mood = clamp(self.mood - 1, 0, 100);
-    } else if (decision.intent === 'IDLE') {
-      self.energy = clamp(self.energy + 1, 0, 100);
+
+  const relTarget = resolveTarget(decision, agentsInRegion, region, offset);
+  if (relTarget) {
+    const relSelf = { x: self.pos.x - offset.x, y: self.pos.y - offset.y };
+    const relPath = aStar(relSelf, relTarget, blocked, region.size);
+    if (relPath && relPath.length > 1) {
+      self.currentAction = decision.intent + (decision.target ? `:${decision.target.id}` : '');
+      return relPath.map(p => ({ x: p.x + offset.x, y: p.y + offset.y }));
     }
-    self.currentAction = decision.intent;
-    return null;
   }
-  self.currentAction = decision.intent + (decision.target ? `:${decision.target.id}` : '');
-  return path;
+
+  if (decision.intent === 'REST') {
+    self.energy = clamp(self.energy + 30, 0, 100);
+    self.mood = clamp(self.mood + 2, 0, 100);
+  } else if (decision.intent === 'WORK') {
+    self.energy = clamp(self.energy - 10, 0, 100);
+    self.mood = clamp(self.mood - 1, 0, 100);
+  } else if (decision.intent === 'IDLE') {
+    self.energy = clamp(self.energy + 1, 0, 100);
+  }
+  self.currentAction = decision.intent;
+  return null;
 }
 
 function resolveTarget(
-  _self: ResidentState,
   d: Decision,
   others: Array<{ id: string; pos: Vec2 }>,
-  region: { interactables: Array<{ id: string; x: number; y: number; type: string }> }
+  region: { interactables: Array<{ id: string; x: number; y: number; type: string }> },
+  offset: Vec2
 ): Vec2 | null {
-  if (d.intent === 'IDLE' || d.intent === 'REST') {
-    return null;
-  }
+  if (d.intent === 'IDLE' || d.intent === 'REST') return null;
   if (d.intent === 'WORK') {
-    const workplace = region.interactables.find(i => i.type === 'shop' || i.type === 'field' || i.type === 'dock');
-    return workplace ? { x: workplace.x, y: workplace.y } : null;
+    const wp = region.interactables.find(i => ['shop','field','dock','stall'].includes(i.type));
+    return wp ? { x: wp.x, y: wp.y } : null;
   }
   if (d.target?.type === 'agent') {
     const other = others.find(o => o.id === d.target!.id);
-    if (other) return nearbyTile(other.pos);
+    if (other) return { x: other.pos.x - offset.x + 1, y: other.pos.y - offset.y };
   }
   if (d.target?.type === 'object' && d.target.id) {
     const obj = region.interactables.find(i => i.id === d.target!.id);
@@ -64,17 +64,9 @@ function resolveTarget(
   }
   if (d.target?.type === 'tile' && d.target.id) {
     const [x, y] = d.target.id.split(',').map(Number);
-    if (!Number.isNaN(x) && !Number.isNaN(y)) return { x, y };
+    if (!Number.isNaN(x) && !Number.isNaN(y)) return { x: x - offset.x, y: y - offset.y };
   }
   return null;
-}
-
-function nearbyTile(p: Vec2): Vec2 {
-  const tries = [
-    { x: p.x + 1, y: p.y }, { x: p.x - 1, y: p.y },
-    { x: p.x, y: p.y + 1 }, { x: p.x, y: p.y - 1 }
-  ];
-  return tries[0];
 }
 
 const SPEED = 0.06;
@@ -89,8 +81,7 @@ export class AgentController {
   constructor(pos: Vec2) { this.pos = { ...pos }; }
 
   setPath(path: Vec2[]) {
-    this.path = path.slice(1);
-    this.pathIdx = 0;
+    this.path = path.slice(1); this.pathIdx = 0;
     this.walking = this.path.length > 0;
   }
 
@@ -102,8 +93,7 @@ export class AgentController {
       return { pos: this.pos, dir: this.dir, walking: false, done: true };
     }
     const target = this.path[this.pathIdx];
-    const dx = target.x - this.pos.x;
-    const dy = target.y - this.pos.y;
+    const dx = target.x - this.pos.x, dy = target.y - this.pos.y;
     if (Math.abs(dx) > SPEED || Math.abs(dy) > SPEED) {
       if (Math.abs(dx) >= Math.abs(dy)) {
         this.dir = dx > 0 ? 'right' : 'left';
@@ -114,8 +104,7 @@ export class AgentController {
       }
       return { pos: this.pos, dir: this.dir, walking: true, done: false };
     }
-    this.pos = { ...target };
-    this.pathIdx++;
+    this.pos = { ...target }; this.pathIdx++;
     if (this.pathIdx >= this.path.length) this.walking = false;
     return { pos: this.pos, dir: this.dir, walking: this.walking, done: !this.walking };
   }
