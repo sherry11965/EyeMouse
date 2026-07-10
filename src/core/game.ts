@@ -301,7 +301,7 @@ class Game {
     const ctx = this.ctx;
     const w = this.canvas.width;
     const h = this.canvas.height;
-    ctx.fillStyle = '#0a0f1e';
+    ctx.fillStyle = '#87ceeb';
     ctx.fillRect(0, 0, w, h);
     const region = REGIONS[this.player.region];
     const screenW = w;
@@ -390,13 +390,13 @@ function drawBubble(ctx: CanvasRenderingContext2D, x: number, y: number, text: s
   const bw = Math.min(140, Math.max(...lines.map(l => ctx.measureText(l).width)) + padX * 2);
   const bh = lines.length * lh + padY * 2;
   const bx = x, by = y - bh - 4;
-  ctx.fillStyle = 'rgba(26,29,46,0.95)';
-  ctx.shadowColor = 'rgba(0,0,0,0.4)';
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.shadowColor = 'rgba(0,0,0,0.2)';
   ctx.shadowBlur = 3;
   roundRect(ctx, bx, by, bw, bh, 3);
   ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = 'rgba(240,192,80,0.4)';
+  ctx.strokeStyle = 'rgba(225,112,85,0.6)';
   ctx.lineWidth = 0.5;
   roundRect(ctx, bx, by, bw, bh, 3);
   ctx.stroke();
@@ -404,9 +404,9 @@ function drawBubble(ctx: CanvasRenderingContext2D, x: number, y: number, text: s
   ctx.moveTo(x + 8, by + bh);
   ctx.lineTo(x + 5, by + bh + 4);
   ctx.lineTo(x + 13, by + bh);
-  ctx.fillStyle = 'rgba(26,29,46,0.95)';
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
   ctx.fill();
-  ctx.fillStyle = '#f0c050';
+  ctx.fillStyle = '#2d3436';
   for (let i = 0; i < lines.length; i++) {
     ctx.fillText(lines[i], bx + padX, by + padY + lh * (i + 1) - 1);
   }
@@ -418,17 +418,17 @@ function drawThought(ctx: CanvasRenderingContext2D, x: number, y: number, text: 
   const tw = Math.min(110, ctx.measureText(display).width + 10);
   const th = 12;
   const bx = x, by = y - th - 3;
-  ctx.fillStyle = 'rgba(26,29,46,0.85)';
-  ctx.shadowColor = 'rgba(0,0,0,0.3)';
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.shadowColor = 'rgba(0,0,0,0.15)';
   ctx.shadowBlur = 2;
   roundRect(ctx, bx, by, tw, th, 6);
   ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = 'rgba(100,223,223,0.25)';
+  ctx.strokeStyle = 'rgba(9,132,227,0.4)';
   ctx.lineWidth = 0.5;
   roundRect(ctx, bx, by, tw, th, 6);
   ctx.stroke();
-  ctx.fillStyle = '#64dfdf';
+  ctx.fillStyle = '#0984e3';
   ctx.fillText(display, bx + 5, by + 9);
 }
 
