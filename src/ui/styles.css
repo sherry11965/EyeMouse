@@ -184,7 +184,7 @@ html, body, #app {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(10, 12, 24, 0.85);
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .modal-card {
@@ -258,7 +258,7 @@ html, body, #app {
   font-size: 36px;
   color: var(--accent);
   margin-bottom: 14px;
-  text-shadow: 4px 4px 0 #8a6a10;
+  text-shadow: 4px 4px 0 rgba(0,0,0,0.2);
 }
 
 .boot-sub {
@@ -305,3 +305,76 @@ html, body, #app {
 ::-webkit-scrollbar-track { background: var(--panel2); }
 ::-webkit-scrollbar-thumb { background: var(--border); border: 2px solid var(--panel2); }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ── Tutorial ── */
+#tutorial-root {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  cursor: pointer;
+}
+
+.tutorial-box {
+  background: var(--panel);
+  border: var(--px) solid var(--accent);
+  padding: 28px 36px;
+  width: min(420px, 90vw);
+  text-align: center;
+  position: relative;
+  box-shadow:
+    inset calc(var(--px) * -1) calc(var(--px) * -1) 0 0 var(--panel2),
+    inset var(--px) var(--px) 0 0 rgba(255,255,255,0.3),
+    0 12px 0 rgba(0,0,0,0.15);
+  animation: modalIn 0.2s step-end;
+}
+
+.tutorial-step {
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.tutorial-title {
+  font-size: 18px;
+  color: var(--accent);
+  margin: 0 0 12px;
+}
+
+.tutorial-text {
+  font-size: 12px;
+  color: var(--fg);
+  line-height: 1.8;
+  margin: 0 0 16px;
+}
+
+.tutorial-hint {
+  font-size: 11px;
+  color: var(--accent3);
+  padding: 8px 12px;
+  background: var(--panel2);
+  border: var(--px) solid var(--border);
+  margin-bottom: 16px;
+  animation: blink 1.5s step-end infinite;
+}
+
+.tutorial-progress {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.tutorial-progress .dot {
+  width: 8px;
+  height: 8px;
+  background: var(--border);
+  border: 2px solid var(--border);
+}
+
+.tutorial-progress .dot.active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
