@@ -68,7 +68,7 @@ html, body, #app {
   font-size: 9px;
   line-height: 1.4;
   box-shadow: var(--shadow);
-  backdrop-filter: blur(8px);
+
   white-space: nowrap;
   transition: border-color 0.3s;
 }
@@ -197,7 +197,7 @@ html, body, #app {
   align-items: center;
   justify-content: center;
   background: rgba(12,14,26,0.82);
-  backdrop-filter: blur(6px);
+
   z-index: 100;
   animation: fadeIn 0.2s ease;
 }

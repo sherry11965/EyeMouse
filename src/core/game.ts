@@ -10,9 +10,21 @@ import { ensureConfigModal } from '../ui/configModal';
 import { drawWorld } from '../render/world';
 import { drawResident } from '../render/sprite';
 import { aStar } from '../world/pathfind';
-import type { Decision, Direction, RegionId, ResidentState, WorldTime } from '../core/types';
+import type { Decision, Direction, RegionId, ResidentPersona, ResidentState, WorldTime } from '../core/types';
 
 setPersonas(RESIDENTS);
+
+const PLAYER_PERSONA: ResidentPersona = {
+  id: 'player',
+  name: '你',
+  occupation: '旅人',
+  personality: '好奇',
+  goals: ['探索小镇'],
+  speechStyle: '友好',
+  spriteKey: 'knight_yellow',
+  home: 'plaza',
+  workplace: 'plaza'
+};
 
 const TILE = 16;
 const DECISION_INTERVAL = 12000;
@@ -143,6 +155,7 @@ class PlayerAgent {
   dir: Direction = 'down';
   speed = 0.1;
   facing: Direction = 'down';
+  walkPhase = 0;
 
   update(keys: Set<string>, regionSize: { w: number; h: number }) {
     const dx = (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0);
@@ -152,6 +165,7 @@ class PlayerAgent {
       this.pos.y = Math.max(0, Math.min(regionSize.h - 1, this.pos.y + dy * this.speed));
       if (Math.abs(dx) >= Math.abs(dy)) this.facing = dx > 0 ? 'right' : 'left';
       else this.facing = dy > 0 ? 'down' : 'up';
+      this.walkPhase = (this.walkPhase + 0.15) % 1;
     }
   }
 }
@@ -325,7 +339,7 @@ class Game {
       draw: () => {
         const px = this.player.pos.x * TILE;
         const py = this.player.pos.y * TILE;
-        drawPlayer(ctx, px, py, this.player.facing);
+        drawResident(ctx, PLAYER_PERSONA, px, py, this.player.facing, this.player.walkPhase, true);
       }
     });
 
@@ -367,22 +381,6 @@ class Game {
       localStorage.setItem('ai-town.save', JSON.stringify(data));
     } catch (e) { console.warn('save failed', e); }
   }
-}
-
-function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number, _dir: Direction) {
-  ctx.shadowColor = 'rgba(240,192,80,0.6)';
-  ctx.shadowBlur = 6;
-  ctx.fillStyle = '#f0c050';
-  roundRect(ctx, x + 2, y + 1, 12, 13, 2);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = '#1a1d2e';
-  ctx.fillRect(x + 5, y + 5, 2, 2);
-  ctx.fillRect(x + 9, y + 5, 2, 2);
-  ctx.strokeStyle = 'rgba(240,192,80,0.5)';
-  ctx.lineWidth = 1;
-  roundRect(ctx, x + 1, y + 1, 14, 14, 2);
-  ctx.stroke();
 }
 
 function drawBubble(ctx: CanvasRenderingContext2D, x: number, y: number, text: string) {
