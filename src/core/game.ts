@@ -384,7 +384,7 @@ class Game {
 }
 
 function drawBubble(ctx: CanvasRenderingContext2D, x: number, y: number, text: string) {
-  ctx.font = '7px monospace';
+  ctx.font = '7px Zpix, monospace';
   const lines = wrapChinese(text, ctx, 120);
   const padX = 5, padY = 4, lh = 10;
   const bw = Math.min(140, Math.max(...lines.map(l => ctx.measureText(l).width)) + padX * 2);
@@ -413,7 +413,7 @@ function drawBubble(ctx: CanvasRenderingContext2D, x: number, y: number, text: s
 }
 
 function drawThought(ctx: CanvasRenderingContext2D, x: number, y: number, text: string) {
-  ctx.font = '6px monospace';
+  ctx.font = '6px Zpix, monospace';
   const display = text.slice(0, 24);
   const tw = Math.min(110, ctx.measureText(display).width + 10);
   const th = 12;
