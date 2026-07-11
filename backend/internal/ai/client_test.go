@@ -41,6 +41,31 @@ func TestOpenAICompatibleBlueprintRequest(t *testing.T) {
 	}
 }
 
+func TestAPIKeyIsTrimmedBeforeRequest(t *testing.T) {
+	var auth string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth = r.Header.Get("Authorization")
+		_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]string{"content": "ok"}}}})
+	}))
+	defer server.Close()
+	client, err := New(Config{BaseURL: server.URL, APIKey: "  secret\r\n", Model: "test-model"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.complete(context.Background(), []Message{{Role: "user", Content: "test"}}, false); err != nil {
+		t.Fatal(err)
+	}
+	if auth != "Bearer secret" {
+		t.Fatalf("unexpected authorization header %q", auth)
+	}
+}
+
+func TestWhitespaceOnlyAPIKeyIsRejected(t *testing.T) {
+	if _, err := New(Config{APIKey: " \r\n", Model: "test-model"}); err == nil || !strings.Contains(err.Error(), "API Key") {
+		t.Fatalf("expected API Key validation error, got %v", err)
+	}
+}
+
 func TestCompletionEndpointAcceptsFullPath(t *testing.T) {
 	if got := completionEndpoint("https://example.com/v1/chat/completions"); got != "https://example.com/v1/chat/completions" {
 		t.Fatalf("unexpected endpoint %s", got)

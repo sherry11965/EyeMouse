@@ -43,6 +43,7 @@ var sharedTransport = func() *http.Transport {
 
 func New(config Config) (*Client, error) {
 	config.BaseURL = strings.TrimRight(strings.TrimSpace(config.BaseURL), "/")
+	config.APIKey = strings.TrimSpace(config.APIKey)
 	config.Model = strings.TrimSpace(config.Model)
 	if config.BaseURL == "" {
 		config.BaseURL = "https://api.openai.com/v1"
