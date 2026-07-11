@@ -165,11 +165,59 @@ func townResidents(offset int, colors []string) []NPC {
 	return result
 }
 
+// buildOccupancyMap 构建空间索引，快速查找位置占用情况
+func (s *State) buildOccupancyMap(town *Scene) map[int]string {
+	occupancy := make(map[int]string, len(s.NPCs)+len(s.Objects)+1)
+	// 玩家位置
+	if s.Player.SceneID == "town" {
+		occupancy[s.Player.Y*town.Width+s.Player.X] = "player"
+	}
+	// NPC位置
+	for _, npc := range s.NPCs {
+		if npc.SceneID == "town" {
+			key := npc.Y*town.Width + npc.X
+			occupancy[key] = "npc:" + npc.ID
+		}
+	}
+	// 物体位置
+	for _, obj := range s.Objects {
+		if obj.SceneID == "town" {
+			width := 1
+			if obj.Kind == "car-red" || obj.Kind == "car-white" || obj.Kind == "tricycle" || obj.Kind == "bus" {
+				width = 2
+			}
+			for dx := 0; dx < width; dx++ {
+				key := obj.Y*town.Width + (obj.X + dx)
+				occupancy[key] = "obj:" + obj.ID
+			}
+		}
+	}
+	return occupancy
+}
+
+// buildWalkablePositions 预计算所有可行走位置
+func (s *State) buildWalkablePositions(town *Scene) []Position {
+	positions := make([]Position, 0, town.Width*town.Height/4)
+	for y := 0; y < town.Height; y++ {
+		for x := 0; x < town.Width; x++ {
+			tile := town.Tiles[y*town.Width+x]
+			if tile == "road" || tile == "parking" || tile == "park" {
+				positions = append(positions, Position{X: x, Y: y})
+			}
+		}
+	}
+	return positions
+}
+
 func (s *State) MoveWanderingNPCs() bool {
 	town := s.Scene("town")
 	if town == nil || s.GameOver {
 		return false
 	}
+	// 预计算空间索引和可行走位置
+	occupancy := s.buildOccupancyMap(town)
+	walkablePositions := s.buildWalkablePositions(town)
+	
 	moved := false
 	for i := range s.NPCs {
 		npc := &s.NPCs[i]
@@ -187,13 +235,14 @@ func (s *State) MoveWanderingNPCs() bool {
 		}
 		if !npc.HasWanderTarget {
 			npc.WanderTrips++
-			npc.WanderTarget = s.pickCrowdDestination(town, npc, i)
+			npc.WanderTarget = s.pickCrowdDestinationOptimized(town, npc, i, walkablePositions, occupancy)
 			npc.HasWanderTarget = true
 		}
-		next, ok := s.nextCrowdPathStep(town, npc)
-		if !ok || !s.crowdWalkable(town, npc.ID, next.X, next.Y) {
+		next, ok := s.nextCrowdPathStepOptimized(town, npc, occupancy)
+		if !ok {
 			continue
 		}
+		// 更新位置
 		npc.X, npc.Y = next.X, next.Y
 		moved = true
 	}
@@ -209,6 +258,32 @@ func (s *State) pickCrowdDestination(town *Scene, npc *NPC, index int) Position 
 				if abs(x-npc.X)+abs(y-npc.Y) >= 8 && s.crowdWalkable(town, npc.ID, x, y) {
 					candidates = append(candidates, Position{X: x, Y: y})
 				}
+			}
+		}
+	}
+	if len(candidates) == 0 {
+		return Position{X: npc.X, Y: npc.Y}
+	}
+	return candidates[(index*31+npc.WanderTrips*47+s.Day*7)%len(candidates)]
+}
+
+// pickCrowdDestinationOptimized 使用预计算位置和空间索引选择目标
+func (s *State) pickCrowdDestinationOptimized(town *Scene, npc *NPC, index int, walkablePositions []Position, occupancy map[int]string) Position {
+	candidates := make([]Position, 0, len(walkablePositions)/4)
+	for _, pos := range walkablePositions {
+		if abs(pos.X-npc.X)+abs(pos.Y-npc.Y) >= 8 {
+			key := pos.Y*town.Width + pos.X
+			if _, occupied := occupancy[key]; !occupied {
+				candidates = append(candidates, pos)
+			}
+		}
+	}
+	if len(candidates) == 0 {
+		// 如果没有足够远的空位，选择任意空位
+		for _, pos := range walkablePositions {
+			key := pos.Y*town.Width + pos.X
+			if _, occupied := occupancy[key]; !occupied {
+				candidates = append(candidates, pos)
 			}
 		}
 	}
@@ -234,6 +309,59 @@ func (s *State) nextCrowdPathStep(town *Scene, npc *NPC) (Position, bool) {
 		for _, direction := range directions {
 			next := Position{X: current.X + direction.X, Y: current.Y + direction.Y}
 			if seen[next] || !s.crowdWalkable(town, npc.ID, next.X, next.Y) {
+				continue
+			}
+			seen[next] = true
+			parent[next] = current
+			queue = append(queue, next)
+		}
+	}
+	if !seen[target] {
+		npc.HasWanderTarget = false
+		return Position{}, false
+	}
+	step := target
+	for parent[step] != start {
+		step = parent[step]
+	}
+	return step, true
+}
+
+// nextCrowdPathStepOptimized 使用空间索引的优化BFS寻路
+func (s *State) nextCrowdPathStepOptimized(town *Scene, npc *NPC, occupancy map[int]string) (Position, bool) {
+	start := Position{X: npc.X, Y: npc.Y}
+	target := npc.WanderTarget
+	queue := []Position{start}
+	seen := map[Position]bool{start: true}
+	parent := map[Position]Position{}
+	directions := []Position{{X: 1}, {Y: 1}, {X: -1}, {Y: -1}}
+	
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		if current == target {
+			break
+		}
+		for _, direction := range directions {
+			next := Position{X: current.X + direction.X, Y: current.Y + direction.Y}
+			if seen[next] {
+				continue
+			}
+			// 边界检查
+			if next.X < 0 || next.Y < 0 || next.X >= town.Width || next.Y >= town.Height {
+				continue
+			}
+			// 使用空间索引快速检查碰撞
+			key := next.Y*town.Width + next.X
+			if occupied, exists := occupancy[key]; exists {
+				// 允许走到目标位置（即使有NPC）
+				if !(next == target && occupied != "player") {
+					continue
+				}
+			}
+			// 检查地形
+			tile := town.Tiles[key]
+			if tile != "road" && tile != "parking" && tile != "park" {
 				continue
 			}
 			seen[next] = true
@@ -650,10 +778,25 @@ func (s *State) EvaluateProject() {
 	}
 	if supporters >= needed {
 		s.Project.Resolved = true
+		s.ProjectResolved = true
 		s.Notice = &Notice{Text: s.Project.SuccessText}
 		s.Ambient = s.Project.SuccessText
 	}
 }
+
+// SkipProject 跳过当前任务
+func (s *State) SkipProject() {
+	if s.Project.Resolved {
+		return
+	}
+	s.Project.Resolved = true
+	s.ProjectResolved = true
+	s.Project.Stage = 3
+	s.Notice = &Notice{Text: "你决定不再继续推动这件事。镇上的生活照常进行，每个人回到自己的日子里。"}
+	s.Ambient = "镇上的事情暂时搁置了。人们各自忙碌，好像什么都没有发生过。"
+	s.RefreshStoryView()
+}
+
 func (s *State) ClearNotice() { s.Notice = nil }
 func (s *State) Interact(objectID string) bool {
 	if s.GameOver {
@@ -712,8 +855,26 @@ func (s *State) isAtOrAfter(clock string) bool {
 }
 
 func (s *State) checkGameOver() bool {
-	if s.GameOver || (s.Player.Hunger > 0 && s.Player.Mood > 0) {
-		return s.GameOver
+	if s.GameOver {
+		return true
+	}
+	// 检查体力为0的情况
+	if s.Player.Energy <= 0 {
+		if s.Player.Lodging != nil {
+			// 有住宿，自动入住休息
+			s.Notice = &Notice{Text: "你太累了，回到招待所休息。"}
+			s.settleNight()
+			return false
+		}
+		// 没有住宿，游戏结束
+		s.GameOver = true
+		s.GameOverReason = "体力耗尽，你倒在了路边。"
+		s.Notice = &Notice{Text: s.GameOverReason + " 游戏失败。"}
+		return true
+	}
+	// 检查饱腹和心情
+	if s.Player.Hunger > 0 && s.Player.Mood > 0 {
+		return false
 	}
 	s.GameOver = true
 	if s.Player.Hunger <= 0 {

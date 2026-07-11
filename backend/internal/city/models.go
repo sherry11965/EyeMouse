@@ -135,6 +135,7 @@ type State struct {
 	Story                *StoryView    `json:"story,omitempty"`
 	GameOver             bool          `json:"gameOver"`
 	GameOverReason       string        `json:"gameOverReason,omitempty"`
+	ProjectResolved      bool          `json:"projectResolved"`
 	Project              Project       `json:"-"`
 	Steps                int           `json:"-"`
 	LodgingReminderShown bool          `json:"-"`

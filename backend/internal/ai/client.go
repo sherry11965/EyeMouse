@@ -97,17 +97,46 @@ func (c *Client) NPCReply(ctx context.Context, state *city.State, npc *city.NPC,
 	if stage < 0 || stage >= len(stageRules) {
 		stage = 0
 	}
-	system := fmt.Sprintf(`你现在是NPC“%s”，身份是%s。性格：%s。个人经历：%s。当前情绪：%s。正在做：%s。你在本局公共事件中的真实顾虑：%s。
+	// 构建更详细的NPC上下文
+	npcContext := fmt.Sprintf(`你现在是NPC“%s”，身份是%s。性格：%s。个人经历：%s。当前情绪：%s。正在做：%s。你在本局公共事件中的真实顾虑：%s。
 这是一个中国现代小镇生活模拟器。你只能知道符合自己身份的信息，不能泄露系统、全局支持度、其他NPC秘密或剧情答案。始终以第一人称自然中文对话，回复1到4句。玩家真正回应了你的顾虑时可以松动态度，但不要轻易被空泛承诺说服。
 剧情阶段：%s。阶段约束：%s
 当前世界：%s 隐藏公共事件背景：%s`, npc.Name, npc.Role, npc.Personality, npc.Biography, npc.Mood, npc.Activity, npc.Concern, state.ProjectStageName(), stageRules[stage], state.PublicContext(), state.Project.Premise)
-	messages := []Message{{Role: "system", Content: system}}
+	
+	// 添加关系状态提示
+	relationship := state.Player.Relationships[npc.ID]
+	if relationship > 20 {
+		npcContext += "\n玩家与你关系较好，可以更坦诚一些。"
+	} else if relationship < 0 {
+		npcContext += "\n玩家与你关系紧张，需要更谨慎。"
+	}
+	
+	// 添加支持状态提示
+	if npc.Support {
+		npcContext += "\n你已经同意参加正式协商，可以讨论具体安排。"
+	}
+	
+	messages := []Message{{Role: "system", Content: npcContext}}
 	if len(history) > 10 {
 		history = history[len(history)-10:]
 	}
 	messages = append(messages, history...)
 	messages = append(messages, Message{Role: "user", Content: playerText})
-	return c.complete(ctx, messages, false)
+	
+	// 添加重试机制
+	var lastErr error
+	for attempt := 0; attempt < 2; attempt++ {
+		reply, err := c.complete(ctx, messages, false)
+		if err == nil {
+			return reply, nil
+		}
+		lastErr = err
+		// 如果是超时错误，重试一次
+		if ctx.Err() != nil {
+			break
+		}
+	}
+	return "", fmt.Errorf("NPC对话失败: %w", lastErr)
 }
 
 func (c *Client) complete(ctx context.Context, messages []Message, jsonMode bool) (string, error) {

@@ -73,6 +73,7 @@ function TownGame({ state, send, messages, thinking, dialogueError, clearDialogu
   const [text, setText] = useState('')
   const [target, setTarget] = useState(null)
   const [guideOpen, setGuideOpen] = useState(true)
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false)
   const scene = state.scenes.find((item) => item.id === state.player.sceneId)
   const presentNPCs = state.npcs.filter((npc) => npc.sceneId === scene.id)
   const presentObjects = state.objects.filter((object) => object.sceneId === scene.id)
@@ -87,21 +88,43 @@ function TownGame({ state, send, messages, thinking, dialogueError, clearDialogu
     playerRef.current?.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' })
   }, [scene.id])
 
+  // 使用ref跟踪是否正在等待服务器响应
+  const waitingForMove = useRef(false)
+  
   useEffect(() => {
     if (previousScene.current !== scene.id) {
       previousScene.current = scene.id
       setTarget(null)
       setDialogueNPC(null)
+      waitingForMove.current = false
       return
     }
     if (!target || dialogueNPC || state.gameOver) return
     if (state.player.x === target.x && state.player.y === target.y) {
       setTarget(null)
+      waitingForMove.current = false
       return
     }
-    const timer = window.setTimeout(() => send({ type: 'move_to', targetX: target.x, targetY: target.y }), 90)
-    return () => window.clearTimeout(timer)
+    // 如果正在等待服务器响应，不发送新请求
+    if (waitingForMove.current) return
+    
+    waitingForMove.current = true
+    // 使用较短的延迟，但等待服务器响应
+    const timer = window.setTimeout(() => {
+      send({ type: 'move_to', targetX: target.x, targetY: target.y })
+      // 服务器响应后会更新player位置，触发下一次effect
+    }, 50)
+    return () => {
+      window.clearTimeout(timer)
+      // 注意：不要在这里设置waitingForMove.current = false
+      // 因为服务器响应后会更新位置，触发新的effect
+    }
   }, [state.player.x, state.player.y, scene.id, state.gameOver, target, dialogueNPC, send])
+  
+  // 当位置更新后，重置等待标志
+  useEffect(() => {
+    waitingForMove.current = false
+  }, [state.player.x, state.player.y])
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -176,7 +199,7 @@ function TownGame({ state, send, messages, thinking, dialogueError, clearDialogu
       </header>
 
       <LifeHUD player={state.player} />
-      {state.story && <StorySidebar story={state.story} mode={state.mode} />}
+      {state.story && <StorySidebar story={state.story} mode={state.mode} onSkipProject={() => setShowSkipConfirm(true)} projectResolved={state.projectResolved} />}
 
       <section className="map-viewport">
         <div className="map-stage">
@@ -209,6 +232,7 @@ function TownGame({ state, send, messages, thinking, dialogueError, clearDialogu
       {hotelOptions && <HotelModal hotelName={scene.name} rooms={hotelOptions.rooms} coins={state.player.coins} lodging={state.player.lodging} time={state.time} onBook={(roomType) => { send({ type: 'book_room', roomType }); closeHotel() }} onCheckIn={() => { send({ type: 'check_in' }); closeHotel() }} onClose={closeHotel} />}
       {state.notice && <TownNotice text={state.notice.text} onClose={() => send({ type: 'dismiss_notice' })} />}
       {state.gameOver && !state.notice && <GameOver reason={state.gameOverReason} />}
+      {showSkipConfirm && <SkipConfirm onConfirm={() => { send({ type: 'skip_project' }); setShowSkipConfirm(false) }} onCancel={() => setShowSkipConfirm(false)} />}
     </main>
   )
 }
@@ -232,9 +256,9 @@ function BeginnerGuide({ mode, onClose }) {
   )
 }
 
-function StorySidebar({ story, mode }) {
+function StorySidebar({ story, mode, onSkipProject, projectResolved }) {
   const [open, setOpen] = useState(true)
-  return <aside className={`story-sidebar pixel-panel ${open ? 'open' : 'closed'}`}><button className="story-toggle" onClick={() => setOpen((value) => !value)}>{open ? '收起' : '主线'}</button>{open && <><span className="story-label">{mode === 'ai' ? 'AI 生成主线' : '本局主线'}</span><h2>{story.title}</h2><p>{story.premise}</p><div className="story-stage"><small>当前局面</small><b>{story.stage}</b></div><section><small>你已经谈到的人</small>{story.knownPeople.length > 0 ? story.knownPeople.map((person) => <div className="story-person" key={person.id}><b>{person.name}</b><span>{person.role}</span><em>{person.building}</em></div>) : <p className="story-empty">先去各个机构走走。只有真正谈过的人才会记录在这里。</p>}</section><footer>这里只记录已经公开的主线信息，不显示隐藏立场、答案或支持度。</footer></>}</aside>
+  return <aside className={`story-sidebar pixel-panel ${open ? 'open' : 'closed'}`}><button className="story-toggle" onClick={() => setOpen((value) => !value)}>{open ? '收起' : '主线'}</button>{open && <><span className="story-label">{mode === 'ai' ? 'AI 生成主线' : '本局主线'}</span><h2>{story.title}</h2><p>{story.premise}</p><div className="story-stage"><small>当前局面</small><b>{story.stage}</b></div><section><small>你已经谈到的人</small>{story.knownPeople.length > 0 ? story.knownPeople.map((person) => <div className="story-person" key={person.id}><b>{person.name}</b><span>{person.role}</span><em>{person.building}</em></div>) : <p className="story-empty">先去各个机构走走。只有真正谈过的人才会记录在这里。</p>}</section>{!projectResolved && <button className="skip-project-button" onClick={onSkipProject}>跳过任务</button>}<footer>这里只记录已经公开的主线信息，不显示隐藏立场、答案或支持度。</footer></>}</aside>
 }
 
 function LifeHUD({ player }) {
@@ -286,6 +310,10 @@ function GameOver({ reason }) {
   return <div className="notice-layer"><section className="town-notice game-over pixel-panel"><span>游戏失败</span><h2>这段小镇生活结束了</h2><p>{reason}</p><button onClick={() => location.reload()}>重新开始</button></section></div>
 }
 
+function SkipConfirm({ onConfirm, onCancel }) {
+  return <div className="notice-layer"><section className="town-notice pixel-panel"><span>跳过任务</span><h2>确定要跳过当前任务吗？</h2><p>跳过后将直接视为任务完成，但不会获得完整的剧情体验。</p><div className="skip-buttons"><button className="skip-confirm" onClick={onConfirm}>确定跳过</button><button className="skip-cancel" onClick={onCancel}>继续任务</button></div></section></div>
+}
+
 function HotelModal({ hotelName, rooms, coins, lodging, time, onBook, onCheckIn, onClose }) {
   const canCheckIn = lodging && time >= '18:00' && time < '21:50'
   return <div className="notice-layer"><section className="hotel-modal pixel-panel"><button className="dialogue-close" onClick={onClose}>×</button><span>{hotelName} · 今晚入住</span><h2>18:00 后可提前入住</h2><p>先办理住所，18:00 后回到前台入住。第二天 07:00 自动退房。</p>{lodging ? <div><button className="check-in-button" disabled={!canCheckIn} onClick={onCheckIn}><b>{lodging.name}</b><span>已支付 {lodging.price} 元</span><em>{canCheckIn ? '现在入住' : '18:00 后可入住'}</em></button></div> : <div>{rooms.map((room) => <button key={room.id} disabled={coins < room.price} onClick={() => onBook(room.id)}><b>{room.name}</b><span>{room.price} 元 / 晚</span><em>{coins < room.price ? '余额不足' : '办理住所'}</em></button>)}</div>}<footer>21:50 前没有入住者会流落街头，精力和心情会受到明显影响。</footer></section></div>
@@ -320,6 +348,17 @@ export default function App() {
       if (message.type === 'generation_progress') setProgress(message.payload)
       if (message.type === 'city_state') { setCityState(message.payload); setScreen('game') }
       if (message.type === 'clock_tick') setCityState((current) => current ? { ...current, time: message.payload.time, day: message.payload.day } : current)
+      if (message.type === 'npc_positions') {
+        // 轻量级NPC位置更新，只更新位置不触发完整重渲染
+        setCityState((current) => {
+          if (!current) return current
+          const updatedNPCs = current.npcs.map((npc) => {
+            const pos = message.payload.find((p) => p.id === npc.id)
+            return pos ? { ...npc, x: pos.x, y: pos.y } : npc
+          })
+          return { ...current, npcs: updatedNPCs }
+        })
+      }
       if (message.type === 'hotel_options') setHotelOptions(message.payload)
       if (message.type === 'dialogue_thinking') setThinking(true)
       if (message.type === 'dialogue_reply') {

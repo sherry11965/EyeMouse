@@ -137,35 +137,40 @@ func (h *handler) websocket(w http.ResponseWriter, r *http.Request) {
 			stateMu.Lock()
 			sendState()
 			stateMu.Unlock()
-			if !tickerStarted {
-				tickerStarted = true
-				go func() {
-					ticker := time.NewTicker(time.Second)
-					defer ticker.Stop()
-					for {
-						select {
-						case <-sessionCtx.Done():
-							return
-						case <-ticker.C:
-							stateMu.Lock()
-							if state == nil {
-								stateMu.Unlock()
-								continue
-							}
-							settled := state.TickMinute()
-							crowdMoved := state.MoveWanderingNPCs()
-							clock := map[string]any{"time": state.Time, "day": state.Day}
-							if settled || crowdMoved || state.Notice != nil || state.GameOver {
-								sendState()
-								stateMu.Unlock()
-								continue
-							}
+		if !tickerStarted {
+			tickerStarted = true
+			go func() {
+				ticker := time.NewTicker(time.Second)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-sessionCtx.Done():
+						return
+					case <-ticker.C:
+						stateMu.Lock()
+						if state == nil {
 							stateMu.Unlock()
-							send(message{Type: "clock_tick", Payload: clock})
+							continue
 						}
+						settled := state.TickMinute()
+						crowdMoved := state.MoveWanderingNPCs()
+						clock := map[string]any{"time": state.Time, "day": state.Day}
+						// 只在有实质变化时推送完整状态，否则只推送时钟
+						if settled || state.Notice != nil || state.GameOver {
+							sendState()
+							stateMu.Unlock()
+							continue
+						}
+					stateMu.Unlock()
+					// NPC移动单独推送轻量更新
+					if crowdMoved {
+						sendNPCPositions(send, state)
 					}
-				}()
-			}
+					send(message{Type: "clock_tick", Payload: clock})
+					}
+				}
+			}()
+		}
 		case "step":
 			stateMu.Lock()
 			if state != nil && !state.GameOver && state.Move(request.DX, request.DY) {
@@ -210,6 +215,13 @@ func (h *handler) websocket(w http.ResponseWriter, r *http.Request) {
 		case "check_in":
 			stateMu.Lock()
 			if state != nil && state.CheckIn() {
+				sendState()
+			}
+			stateMu.Unlock()
+		case "skip_project":
+			stateMu.Lock()
+			if state != nil && !state.Project.Resolved {
+				state.SkipProject()
 				sendState()
 			}
 			stateMu.Unlock()
@@ -268,6 +280,22 @@ func (h *handler) websocket(w http.ResponseWriter, r *http.Request) {
 
 func sendGenerationProgress(send func(message), step, total int, text, phase string) {
 	send(message{Type: "generation_progress", Payload: map[string]any{"step": step, "total": total, "message": text, "phase": phase}})
+}
+
+// sendNPCPositions 发送轻量级的NPC位置更新
+func sendNPCPositions(send func(message), state *city.State) {
+	type npcPos struct {
+		ID string `json:"id"`
+		X  int    `json:"x"`
+		Y  int    `json:"y"`
+	}
+	positions := make([]npcPos, 0, len(state.NPCs))
+	for _, npc := range state.NPCs {
+		if npc.Wandering {
+			positions = append(positions, npcPos{ID: npc.ID, X: npc.X, Y: npc.Y})
+		}
+	}
+	send(message{Type: "npc_positions", Payload: positions})
 }
 
 func streamGenerationProgress(ctx context.Context, done <-chan struct{}, send func(message)) {
@@ -368,6 +396,8 @@ func walkable(state *city.State, scene *city.Scene, x, y, targetX, targetY int) 
 
 func townDialogue(npc *city.NPC, text string, turn int, state *city.State) (string, int) {
 	clean := strings.ToLower(strings.TrimSpace(text))
+	
+	// 第一次交谈
 	if !npc.Spoken {
 		npc.Spoken = true
 		state.Player.Knowledge[npc.ID] = true
@@ -377,31 +407,55 @@ func townDialogue(npc *city.NPC, text string, turn int, state *city.State) (stri
 		return npc.Opening + " 对方没有把话说透，像是在等你问到真正要紧的地方。", 3
 	}
 
+	// 询问顾虑
 	if asksConcern(clean) {
 		state.Player.Knowledge[npc.ID] = true
 		return "对方沉默了一会儿，终于说了实话：『" + npc.Concern + "』", 6
 	}
 
+	// 提出解决方案
 	matches := keywordMatches(clean, npc.Needles)
+	relationship := state.Player.Relationships[npc.ID]
 	if matches >= 1 && state.Player.Knowledge[npc.ID] {
-		if !npc.Support {
-			npc.Support = true
-			npc.Mood = "愿意再谈谈"
-			npc.Activity = "把自己的想法写在一张纸上"
-			return "对方把你的话重复了一遍，确认你不是随口敷衍。『你要真能把这一点算进去，我愿意参加正式协商，自己把条件说清楚。』", 12
+		// 检查是否真的提出了具体方案
+		hasSpecificPlan := containsSpecificPlan(clean)
+		// 或者关系值足够高
+		relationshipReady := relationship >= 10
+		
+		if hasSpecificPlan || relationshipReady {
+			if !npc.Support {
+				npc.Support = true
+				npc.Mood = "愿意再谈谈"
+				npc.Activity = "把自己的想法写在一张纸上"
+				return "对方把你的话重复了一遍，确认你不是随口敷衍。『你要真能把这一点算进去，我愿意参加正式协商，自己把条件说清楚。』", 12
+			}
+			return "『我答应的事不会反悔。』对方说，『但别忘了，别人也有他们过不去的坎。』", 3
 		}
-		return "『我答应的事不会反悔。』对方说，『但别忘了，别人也有他们过不去的坎。』", 3
+		// 有关键词但没有具体方案
+		return "『你说的这点我听到了。』对方点点头，『但具体怎么安排，你有没有想过？』", 2
 	}
 
+	// 询问其他人
 	if strings.Contains(clean, "谁") || strings.Contains(clean, "别人") || strings.Contains(clean, "找谁") {
 		return crossHint(npc.ID, state.Project.Kind), 3
 	}
+	
+	// 直接询问支持
 	if strings.Contains(clean, "支持") || strings.Contains(clean, "同意") || strings.Contains(clean, "答应") {
 		return "『不是一句支持不支持。』对方皱了皱眉，『你先说说，我最担心的那件事准备怎么办？』", 1
 	}
+	
+	// 建立关系
+	if containsRelationshipBuilding(clean) {
+		return "『你能这么说，我听着舒服。』对方态度缓和了一些，『但这件事还得看具体怎么做。』", 2
+	}
+	
+	// 短回复
 	if utf8.RuneCountInString(clean) < 4 {
 		return "对方等了一会儿：『你可以直说。我更想知道，你有没有听懂我刚才在担心什么。』", 1
 	}
+	
+	// 默认回复
 	responses := []string{
 		"『道理我都懂。』对方手里的动作没有停，『可日子不是按大道理过的。你再想想，这件事会具体影响到谁。』",
 		"对方看了你一眼：『你愿意听是好事。但听见和听懂，中间还隔着一步。』",
@@ -431,18 +485,75 @@ func keywordMatches(text string, words []string) int {
 
 func evaluateUnderstanding(state *city.State, npc *city.NPC, text string) int {
 	clean := strings.ToLower(text)
+	
+	// 第一阶段：询问顾虑
 	if asksConcern(clean) {
 		npc.Spoken = true
 		state.Player.Knowledge[npc.ID] = true
 		return 4
 	}
+	
+	// 第二阶段：提出解决方案
 	matches := keywordMatches(clean, npc.Needles)
+	relationship := state.Player.Relationships[npc.ID]
+	
+	// 已经问过顾虑，且匹配关键词
 	if matches > 0 && state.Player.Knowledge[npc.ID] {
-		npc.Support = true
-		npc.Mood = "愿意继续协商"
-		return 6 + matches*2
+		// 检查是否真的提出了具体方案
+		hasSpecificPlan := containsSpecificPlan(clean)
+		// 或者关系值足够高（说明之前交流充分）
+		relationshipReady := relationship >= 10
+		
+		if hasSpecificPlan || relationshipReady {
+			npc.Support = true
+			npc.Mood = "愿意继续协商"
+			return 6 + matches*2
+		}
+		// 有关键词但没有具体方案，给部分关系值
+		return 3 + matches
 	}
+	
+	// 第三阶段：建立关系
+	if containsRelationshipBuilding(clean) {
+		return 2
+	}
+	
 	return 1
+}
+
+// containsSpecificPlan 检查是否包含具体方案
+func containsSpecificPlan(text string) bool {
+	specificWords := []string{
+		// 方案类
+		"安排", "计划", "方案", "步骤", "流程", "制度", "规则", "协议", "合同",
+		// 资源类
+		"预算", "资金", "人员", "设备", "材料", "费用", "钱", "拨款",
+		// 时间地点类
+		"时间", "地点", "负责人", "责任人", "监督",
+		// 行动类
+		"先做", "第一步", "首先", "然后", "接下来", "最后", "可以", "愿意", "答应", "保证", "承诺",
+		// 解决类
+		"解决", "处理", "改善", "调整", "修改", "优化", "协调", "沟通",
+		// 具体措施
+		"开会", "协商", "讨论", "调研", "考察", "试行", "试点", "分阶段",
+	}
+	for _, word := range specificWords {
+		if strings.Contains(text, word) {
+			return true
+		}
+	}
+	return false
+}
+
+// containsRelationshipBuilding 检查是否包含建立关系的内容
+func containsRelationshipBuilding(text string) bool {
+	relationshipWords := []string{"理解", "明白", "知道", "感谢", "谢谢", "辛苦", "帮忙", "支持", "合作", "一起"}
+	for _, word := range relationshipWords {
+		if strings.Contains(text, word) {
+			return true
+		}
+	}
+	return false
 }
 
 func crossHint(id, project string) string {
